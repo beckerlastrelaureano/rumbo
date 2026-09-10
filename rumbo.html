@@ -1,0 +1,1838 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Rumbo</title>
+
+<!-- PWA: hace que se pueda instalar en el celular como una app -->
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#12141F" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Rumbo" />
+<link rel="icon" href="icon-192.png" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+
+<!-- Tailwind precompilado localmente (sin CDN, funciona sin internet) -->
+<link rel="stylesheet" href="tailwind.min.css" />
+
+<!-- Tipografías (si no hay internet, cae a las fuentes del sistema) -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+
+<!-- React + ReactDOM alojados localmente (sin CDN, funciona sin internet) -->
+<script src="react.production.min.js"></script>
+<script src="react-dom.production.min.js"></script>
+
+<style>
+  html, body { margin: 0; padding: 0; background: #12141F; }
+  @keyframes confetti-fall {
+    0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(70vh) rotate(360deg); opacity: 0; }
+  }
+  input::placeholder, textarea::placeholder { color: #5D6178; }
+  * { -webkit-tap-highlight-color: transparent; }
+</style>
+
+<!-- Diagnóstico: si algo no carga, lo muestra en pantalla en vez de dejar todo en negro -->
+<script>
+  function showBootError(msg) {
+    var el = document.getElementById("root");
+    if (el) {
+      el.innerHTML =
+        '<div style="min-height:100vh;padding:24px;color:#E27D6B;font-family:monospace;font-size:13px;white-space:pre-wrap;line-height:1.5;">⚠️ Rumbo no pudo cargar\n\n' +
+        msg +
+        "</div>";
+    }
+  }
+  window.addEventListener("error", function (e) {
+    showBootError((e.error && e.error.stack) || e.message || "Error desconocido");
+  });
+  window.addEventListener("unhandledrejection", function (e) {
+    showBootError(String((e.reason && e.reason.stack) || e.reason));
+  });
+  window.addEventListener("load", function () {
+    setTimeout(function () {
+      if (!window.React || !window.ReactDOM) {
+        showBootError(
+          "No se pudo cargar React o ReactDOM.\n\n" +
+            "Estos archivos (react.production.min.js y react-dom.production.min.js) tienen que estar " +
+            "en la MISMA carpeta que rumbo.html. Revisá que se hayan copiado bien.\n\n" +
+            "React: " + (window.React ? "cargó bien" : "NO CARGÓ") + "\n" +
+            "ReactDOM: " + (window.ReactDOM ? "cargó bien" : "NO CARGÓ")
+        );
+      }
+    }, 2000);
+  });
+  // Registra el service worker para que la app funcione instalada y sin conexión
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("service-worker.js").catch(function () {});
+    });
+  }
+</script>
+</head>
+<body>
+<div id="root">
+  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;color:#5D6178;font-family:sans-serif;font-size:13px;">
+    Cargando Rumbo…
+  </div>
+</div>
+
+<script>
+(() => {
+  // rumbo_inner.js
+  var { useState, useEffect, useMemo, useCallback } = React;
+  if (typeof window !== "undefined" && !window.storage) {
+    window.storage = {
+      async get(key) {
+        try {
+          const raw = localStorage.getItem(key);
+          return raw === null ? null : { key, value: raw, shared: false };
+        } catch (e) {
+          return null;
+        }
+      },
+      async set(key, value) {
+        try {
+          localStorage.setItem(key, value);
+          return { key, value, shared: false };
+        } catch (e) {
+          return null;
+        }
+      },
+      async delete(key) {
+        try {
+          localStorage.removeItem(key);
+          return { key, deleted: true, shared: false };
+        } catch (e) {
+          return null;
+        }
+      },
+      async list(prefix) {
+        try {
+          const keys = Object.keys(localStorage).filter((k) => !prefix || k.startsWith(prefix));
+          return { keys, prefix, shared: false };
+        } catch (e) {
+          return { keys: [] };
+        }
+      }
+    };
+  }
+  var C = {
+    bg: "#12141F",
+    bgSoft: "#171A28",
+    card: "#1C2032",
+    card2: "#232739",
+    border: "#2B3046",
+    borderSoft: "#242942",
+    text: "#EDEBE3",
+    textMuted: "#9497AC",
+    textFaint: "#5D6178",
+    gold: "#2E97AC",
+    onAccent: "#EEF6F7",
+    mustard: "#C9A15A",
+    sage: "#7FBFA0",
+    violet: "#B79CED",
+    blue: "#6FA8DC",
+    rose: "#E8909D",
+    teal: "#63C9C9",
+    danger: "#E27D6B"
+  };
+  function withAlpha(hex, alpha) {
+    const h = hex.replace("#", "");
+    const r = parseInt(h.substring(0, 2), 16);
+    const g = parseInt(h.substring(2, 4), 16);
+    const b = parseInt(h.substring(4, 6), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+  var FONT_DISPLAY = "'Fraunces', serif";
+  var FONT_BODY = "'Inter', sans-serif";
+  var FONT_MONO = "'Space Mono', monospace";
+  var CATEGORIES = [
+    { id: "salud", label: "Salud", color: C.sage },
+    { id: "finanzas", label: "Finanzas", color: C.blue },
+    { id: "espiritualidad", label: "Espiritualidad", color: C.violet },
+    { id: "mente", label: "Mente", color: C.mustard },
+    { id: "relaciones", label: "Relaciones", color: C.rose },
+    { id: "productividad", label: "Productividad", color: C.teal }
+  ];
+  var TIME_BLOCKS = [
+    { id: "manana", label: "Ma\xF1ana" },
+    { id: "tarde", label: "Tarde" },
+    { id: "noche", label: "Noche" }
+  ];
+  var SUGGESTED = {
+    salud: [
+      { name: "Tomar 2 litros de agua", block: "tarde" },
+      { name: "Dormir 8 horas", block: "noche" },
+      { name: "Caminar 30 minutos", block: "tarde" },
+      { name: "Estirar al despertar", block: "manana" },
+      { name: "Comer una fruta", block: "tarde" },
+      { name: "Evitar pantallas antes de dormir", block: "noche" }
+    ],
+    finanzas: [
+      { name: "Anotar los gastos del d\xEDa", block: "noche" },
+      { name: "Ahorrar un monto fijo", block: "manana" },
+      { name: "Revisar el presupuesto semanal", block: "manana" },
+      { name: "Leer sobre finanzas 10 minutos", block: "tarde" },
+      { name: "Evitar compras impulsivas", block: "tarde" }
+    ],
+    espiritualidad: [
+      { name: "Meditar 10 minutos", block: "manana" },
+      { name: "Escribir 3 cosas por las que agradecer", block: "noche" },
+      { name: "Leer un texto inspirador", block: "noche" },
+      { name: "Practicar respiraci\xF3n consciente", block: "tarde" },
+      { name: "Escribir en un diario", block: "noche" }
+    ],
+    mente: [
+      { name: "Leer 20 p\xE1ginas", block: "noche" },
+      { name: "Aprender algo nuevo", block: "tarde" },
+      { name: "Practicar un idioma", block: "manana" },
+      { name: "Escuchar un podcast educativo", block: "tarde" },
+      { name: "Resolver un acertijo", block: "manana" }
+    ],
+    relaciones: [
+      { name: "Llamar a un familiar", block: "tarde" },
+      { name: "Decirle a alguien que lo quer\xE9s", block: "manana" },
+      { name: "Escribirle a un amigo", block: "tarde" },
+      { name: "Compartir una comida sin pantallas", block: "noche" }
+    ],
+    productividad: [
+      { name: "Planificar el d\xEDa", block: "manana" },
+      { name: "Hacer la cama", block: "manana" },
+      { name: "Ordenar el espacio de trabajo", block: "tarde" },
+      { name: "Revisar los objetivos de la semana", block: "manana" },
+      { name: "Definir la prioridad del d\xEDa", block: "manana" }
+    ]
+  };
+  var QUOTES = [
+    "Un h\xE1bito peque\xF1o, hecho todos los d\xEDas, pesa m\xE1s que un esfuerzo enorme, hecho una sola vez.",
+    "No necesit\xE1s motivaci\xF3n, necesit\xE1s una rutina.",
+    "Hoy es una casilla m\xE1s en la lista de qui\xE9n quer\xE9s ser.",
+    "El progreso no se nota d\xEDa a d\xEDa, se nota mes a mes.",
+    "La constancia le gana a la intensidad.",
+    "No se trata de tener tiempo, se trata de hacer lugar.",
+    "Cada check es un voto por la persona en la que te quer\xE9s convertir.",
+    "Empezar de nuevo tambi\xE9n cuenta como avanzar.",
+    "Lo que se repite, se vuelve identidad.",
+    "Un d\xEDa malo no borra diez d\xEDas buenos.",
+    "Mejor imperfecto y constante que perfecto y ocasional.",
+    "La disciplina es elegir entre lo que quer\xE9s ahora y lo que quer\xE9s de verdad.",
+    "No hace falta sentir ganas, alcanza con empezar.",
+    "Las rachas se cuidan de a un d\xEDa por vez.",
+    "El orden de hoy es el descanso de ma\xF1ana.",
+    "Tu rutina de hoy es una carta para tu yo futuro.",
+    "Avanzar despacio tambi\xE9n es avanzar.",
+    "La versi\xF3n de vos que quer\xE9s ser ya empez\xF3, solo falta sostenerla.",
+    "Un h\xE1bito no se rompe por saltear un d\xEDa, se rompe por no volver al siguiente.",
+    "Peque\xF1o y sostenible le gana a grande e imposible.",
+    "Hacelo aunque sea a medias, pero hacelo.",
+    "El cuerpo y la mente aprenden con repetici\xF3n, no con promesas.",
+    "Cada \xE1rea de tu vida mejora un poco cuando le dedic\xE1s un poco.",
+    "No est\xE1s empezando de cero, est\xE1s empezando con experiencia.",
+    "La calma de hoy se construye con las decisiones de ayer.",
+    "Ser constante es un acto de cuidado hacia vos mismo.",
+    "Los resultados llegan tarde, pero llegan.",
+    "Eleg\xED una sola cosa hoy y hacela bien.",
+    "El descanso tambi\xE9n es parte del plan.",
+    "Vas a mitad de a\xF1o o vas al principio, siempre es un buen momento para empezar."
+  ];
+  var DAYS = ["Lunes", "Martes", "Mi\xE9rcoles", "Jueves", "Viernes", "S\xE1bado", "Domingo"];
+  var MEALS = ["Desayuno", "Almuerzo", "Merienda", "Cena"];
+  var MOODS = [1, 2, 3, 4, 5];
+  var LIFE_AREAS = [
+    { id: "salud", label: "Salud" },
+    { id: "dinero", label: "Dinero" },
+    { id: "amor", label: "Amor" },
+    { id: "familia", label: "Familia" },
+    { id: "profesion", label: "Profesi\xF3n" },
+    { id: "desarrollo", label: "Desarrollo personal" },
+    { id: "ocio", label: "Ocio" },
+    { id: "amigos", label: "Amigos" }
+  ];
+  var fmtDate = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+  var dayOfYear = (d) => {
+    const start = new Date(d.getFullYear(), 0, 0);
+    return Math.floor((d - start) / 864e5);
+  };
+  var uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  var weekdayIndex = (d) => (d.getDay() + 6) % 7;
+  async function getItem(key, fallback) {
+    try {
+      const res = await window.storage.get(key, false);
+      if (!res || res.value === void 0 || res.value === null) return fallback;
+      return JSON.parse(res.value);
+    } catch (e) {
+      return fallback;
+    }
+  }
+  async function setItem(key, value) {
+    try {
+      await window.storage.set(key, JSON.stringify(value), false);
+    } catch (e) {
+      console.error("storage error", key, e);
+    }
+  }
+  function prefersReducedMotion() {
+    try {
+      return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    } catch (e) {
+      return false;
+    }
+  }
+  function Chip({ active, color, onClick, children, small }) {
+    return /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        type: "button",
+        onClick,
+        style: {
+          fontFamily: FONT_BODY,
+          background: active ? withAlpha(color || C.gold, 0.18) : C.card2,
+          borderColor: active ? withAlpha(color || C.gold, 0.7) : C.border,
+          color: active ? color || C.gold : C.textMuted
+        },
+        className: `flex items-center gap-1.5 rounded-full border whitespace-nowrap transition-colors ${small ? "px-3 py-1.5 text-xs" : "px-3.5 py-2 text-sm"}`
+      },
+      children
+    );
+  }
+  function ConfettiLayer({ bursts }) {
+    if (bursts.length === 0) return null;
+    return /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 pointer-events-none z-50 overflow-hidden" }, bursts.map(
+      (b) => b.particles.map((p) => /* @__PURE__ */ React.createElement(
+        "span",
+        {
+          key: p.id,
+          style: {
+            position: "absolute",
+            top: 0,
+            left: `${p.left}%`,
+            width: p.size,
+            height: p.size * (p.shape === "bar" ? 0.35 : 1),
+            background: p.color,
+            borderRadius: p.shape === "circle" ? "50%" : 2,
+            opacity: 0,
+            animation: `confetti-fall ${p.duration}ms ease-in ${p.delay}ms forwards`,
+            transform: `rotate(${p.rotate}deg)`
+          }
+        }
+      ))
+    ));
+  }
+  function makeBurst(count, palette) {
+    const particles = [];
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        id: uid(),
+        left: Math.random() * 100,
+        size: 6 + Math.random() * 7,
+        color: palette[Math.floor(Math.random() * palette.length)],
+        duration: 1400 + Math.random() * 900,
+        delay: Math.random() * 250,
+        rotate: Math.random() * 360,
+        shape: Math.random() > 0.5 ? "circle" : "bar"
+      });
+    }
+    return { id: uid(), particles };
+  }
+  function DayRing({ pct, streak }) {
+    const r = 68;
+    const circumference = 2 * Math.PI * r;
+    const offset = circumference * (1 - pct / 100);
+    return /* @__PURE__ */ React.createElement("div", { className: "relative flex items-center justify-center", style: { width: 168, height: 168 } }, /* @__PURE__ */ React.createElement("svg", { width: "168", height: "168", viewBox: "0 0 168 168", style: { transform: "rotate(-90deg)" } }, /* @__PURE__ */ React.createElement("defs", null, /* @__PURE__ */ React.createElement("linearGradient", { id: "ringGrad", x1: "0%", y1: "0%", x2: "100%", y2: "100%" }, /* @__PURE__ */ React.createElement("stop", { offset: "0%", stopColor: C.gold }), /* @__PURE__ */ React.createElement("stop", { offset: "55%", stopColor: C.rose }), /* @__PURE__ */ React.createElement("stop", { offset: "100%", stopColor: C.violet }))), /* @__PURE__ */ React.createElement("circle", { cx: "84", cy: "84", r, fill: "none", stroke: C.card2, strokeWidth: "12" }), /* @__PURE__ */ React.createElement(
+      "circle",
+      {
+        cx: "84",
+        cy: "84",
+        r,
+        fill: "none",
+        stroke: "url(#ringGrad)",
+        strokeWidth: "12",
+        strokeLinecap: "round",
+        strokeDasharray: circumference,
+        strokeDashoffset: offset,
+        style: { transition: "stroke-dashoffset 700ms cubic-bezier(.4,0,.2,1)" }
+      }
+    )), /* @__PURE__ */ React.createElement("div", { className: "absolute flex flex-col items-center justify-center" }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: FONT_MONO, color: C.text }, className: "text-2xl font-bold leading-tight" }, pct, "%"), /* @__PURE__ */ React.createElement("span", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-xs" }, "hoy"), streak > 0 && /* @__PURE__ */ React.createElement("span", { style: { fontFamily: FONT_MONO, color: C.gold }, className: "text-xs mt-1" }, "racha \xB7 ", streak, "d")));
+  }
+  function BlockBar({ block, pct }) {
+    const { label } = block;
+    return /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2.5 w-full" }, /* @__PURE__ */ React.createElement("div", { className: "flex-1" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-1" }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: FONT_BODY, color: C.textMuted }, className: "text-xs" }, label), /* @__PURE__ */ React.createElement("span", { style: { fontFamily: FONT_MONO, color: C.textFaint }, className: "text-xs" }, pct, "%")), /* @__PURE__ */ React.createElement("div", { className: "h-1.5 rounded-full w-full overflow-hidden", style: { background: C.card2 } }, /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        className: "h-full rounded-full",
+        style: {
+          width: `${pct}%`,
+          background: `linear-gradient(90deg, ${C.gold}, ${C.rose})`,
+          transition: "width 500ms ease"
+        }
+      }
+    ))));
+  }
+  function HabitRow({ habit, done, streak, onToggle, onEdit, onDelete }) {
+    const [menuOpen, setMenuOpen] = useState(false);
+    const [confirming, setConfirming] = useState(false);
+    const cat = CATEGORIES.find((c) => c.id === habit.category) || CATEGORIES[0];
+    return /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        className: "flex items-center gap-3 rounded-2xl px-3 py-3 relative",
+        style: { background: C.card, border: `1px solid ${C.borderSoft}` }
+      },
+      /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          type: "button",
+          onClick: () => onToggle(habit.id),
+          "aria-label": done ? "Marcar como no hecho" : "Marcar como hecho",
+          className: "flex items-center justify-center rounded-full shrink-0 transition-transform active:scale-90",
+          style: {
+            width: 30,
+            height: 30,
+            border: `2px solid ${done ? cat.color : C.border}`,
+            background: done ? cat.color : "transparent"
+          }
+        },
+        done && /* @__PURE__ */ React.createElement("span", { style: { color: C.bg, fontSize: 14, fontWeight: 900, lineHeight: 1 } }, "\u2713")
+      ),
+      /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0" }, /* @__PURE__ */ React.createElement(
+        "p",
+        {
+          style: {
+            fontFamily: FONT_BODY,
+            color: done ? C.textFaint : C.text,
+            textDecoration: done ? "line-through" : "none"
+          },
+          className: "text-sm font-medium truncate"
+        },
+        habit.name
+      ), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mt-0.5" }, /* @__PURE__ */ React.createElement(
+        "span",
+        {
+          className: "inline-flex items-center gap-1 text-xs",
+          style: { fontFamily: FONT_BODY, color: cat.color }
+        },
+        /* @__PURE__ */ React.createElement("span", { className: "rounded-full", style: { width: 6, height: 6, background: cat.color } }),
+        cat.label
+      ), streak >= 2 && /* @__PURE__ */ React.createElement(
+        "span",
+        {
+          className: "inline-flex items-center text-xs",
+          style: { fontFamily: FONT_MONO, color: C.gold }
+        },
+        streak,
+        "d"
+      ))),
+      /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          type: "button",
+          onClick: () => setMenuOpen((v) => !v),
+          style: { color: C.textFaint },
+          className: "p-1.5 shrink-0",
+          "aria-label": "M\xE1s opciones"
+        },
+        /* @__PURE__ */ React.createElement("span", { style: { fontSize: 20, lineHeight: 1 } }, "\u22EE")
+      ),
+      menuOpen && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 z-30", onClick: () => {
+        setMenuOpen(false);
+        setConfirming(false);
+      } }), /* @__PURE__ */ React.createElement(
+        "div",
+        {
+          className: "absolute right-2 top-12 z-40 rounded-xl overflow-hidden",
+          style: { background: C.card2, border: `1px solid ${C.border}`, minWidth: 160 }
+        },
+        !confirming ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            type: "button",
+            onClick: () => {
+              setMenuOpen(false);
+              onEdit(habit);
+            },
+            style: { fontFamily: FONT_BODY, color: C.text },
+            className: "flex items-center gap-2 w-full px-3.5 py-2.5 text-sm hover:opacity-80 text-left"
+          },
+          "Editar"
+        ), /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            type: "button",
+            onClick: () => setConfirming(true),
+            style: { fontFamily: FONT_BODY, color: C.danger },
+            className: "flex items-center gap-2 w-full px-3.5 py-2.5 text-sm hover:opacity-80 text-left"
+          },
+          "Eliminar"
+        )) : /* @__PURE__ */ React.createElement("div", { className: "px-3.5 py-2.5" }, /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.text }, className: "text-xs mb-2" }, "\xBFEliminar h\xE1bito?"), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            type: "button",
+            onClick: () => {
+              onDelete(habit.id);
+              setMenuOpen(false);
+              setConfirming(false);
+            },
+            style: { background: C.danger, color: C.bg, fontFamily: FONT_BODY },
+            className: "flex-1 rounded-lg py-1.5 text-xs font-semibold"
+          },
+          "S\xED"
+        ), /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            type: "button",
+            onClick: () => setConfirming(false),
+            style: { background: C.border, color: C.text, fontFamily: FONT_BODY },
+            className: "flex-1 rounded-lg py-1.5 text-xs font-semibold"
+          },
+          "No"
+        )))
+      ))
+    );
+  }
+  function HabitSheet({ initial, onClose, onSave, onDelete, existingNames }) {
+    var _a;
+    const [name, setName] = useState((initial == null ? void 0 : initial.name) || "");
+    const [category, setCategory] = useState((initial == null ? void 0 : initial.category) || CATEGORIES[0].id);
+    const [block, setBlock] = useState((initial == null ? void 0 : initial.timeBlock) || TIME_BLOCKS[0].id);
+    const [confirmingDelete, setConfirmingDelete] = useState(false);
+    const isEdit = Boolean(initial == null ? void 0 : initial.id);
+    const suggestions = (SUGGESTED[category] || []).filter(
+      (s) => !existingNames.includes(s.name.toLowerCase())
+    );
+    const canSave = name.trim().length > 0;
+    return /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 z-50 flex items-end sm:items-center justify-center" }, /* @__PURE__ */ React.createElement("div", { className: "absolute inset-0", style: { background: "rgba(8,9,14,0.7)" }, onClick: onClose }), /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        className: "relative w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl px-5 pt-3 pb-6 overflow-y-auto",
+        style: { background: C.bgSoft, border: `1px solid ${C.border}`, maxHeight: "88vh" }
+      },
+      /* @__PURE__ */ React.createElement("div", { className: "flex justify-center mb-3 sm:hidden" }, /* @__PURE__ */ React.createElement("div", { className: "rounded-full", style: { width: 36, height: 4, background: C.border } })),
+      /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-4" }, /* @__PURE__ */ React.createElement("h3", { style: { fontFamily: FONT_DISPLAY, color: C.text }, className: "text-xl" }, isEdit ? "Editar h\xE1bito" : "Nuevo h\xE1bito"), /* @__PURE__ */ React.createElement("button", { type: "button", onClick: onClose, style: { color: C.textFaint } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 20, lineHeight: 1 } }, "\u2715"))),
+      /* @__PURE__ */ React.createElement("label", { style: { fontFamily: FONT_BODY, color: C.textMuted }, className: "text-xs block mb-1.5" }, "Nombre"),
+      /* @__PURE__ */ React.createElement(
+        "input",
+        {
+          value: name,
+          onChange: (e) => setName(e.target.value),
+          placeholder: "Ej: Meditar 10 minutos",
+          style: {
+            fontFamily: FONT_BODY,
+            background: C.card2,
+            border: `1px solid ${C.border}`,
+            color: C.text
+          },
+          className: "w-full rounded-xl px-3.5 py-2.5 text-sm mb-4 outline-none"
+        }
+      ),
+      /* @__PURE__ */ React.createElement("label", { style: { fontFamily: FONT_BODY, color: C.textMuted }, className: "text-xs block mb-1.5" }, "Categor\xEDa"),
+      /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-2 mb-4" }, CATEGORIES.map((c) => /* @__PURE__ */ React.createElement(Chip, { key: c.id, active: category === c.id, color: c.color, onClick: () => setCategory(c.id), small: true }, /* @__PURE__ */ React.createElement("span", { className: "rounded-full", style: { width: 6, height: 6, background: c.color } }), " ", c.label))),
+      /* @__PURE__ */ React.createElement("label", { style: { fontFamily: FONT_BODY, color: C.textMuted }, className: "text-xs block mb-1.5" }, "Momento del d\xEDa"),
+      /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-2 mb-2" }, TIME_BLOCKS.map((b) => /* @__PURE__ */ React.createElement(Chip, { key: b.id, active: block === b.id, color: C.gold, onClick: () => setBlock(b.id), small: true }, b.label))),
+      !isEdit && suggestions.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "mt-4" }, /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-xs mb-2" }, "Sugerencias de ", (_a = CATEGORIES.find((c) => c.id === category)) == null ? void 0 : _a.label.toLowerCase()), /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-2" }, suggestions.map((s) => /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          key: s.name,
+          type: "button",
+          onClick: () => {
+            setName(s.name);
+            setBlock(s.block);
+          },
+          style: {
+            fontFamily: FONT_BODY,
+            background: C.card2,
+            border: `1px solid ${C.border}`,
+            color: C.textMuted
+          },
+          className: "rounded-full px-3 py-1.5 text-xs"
+        },
+        "+ ",
+        s.name
+      )))),
+      /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mt-6" }, isEdit && !confirmingDelete && /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          type: "button",
+          onClick: () => setConfirmingDelete(true),
+          style: { border: `1px solid ${C.danger}`, color: C.danger, fontFamily: FONT_BODY },
+          className: "rounded-xl px-4 py-3 text-sm font-semibold shrink-0"
+        },
+        "Eliminar"
+      ), isEdit && confirmingDelete && /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 flex-1" }, /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          type: "button",
+          onClick: () => onDelete(initial.id),
+          style: { background: C.danger, color: C.bg, fontFamily: FONT_BODY },
+          className: "flex-1 rounded-xl py-3 text-sm font-semibold"
+        },
+        "Confirmar"
+      ), /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          type: "button",
+          onClick: () => setConfirmingDelete(false),
+          style: { background: C.border, color: C.text, fontFamily: FONT_BODY },
+          className: "flex-1 rounded-xl py-3 text-sm font-semibold"
+        },
+        "Cancelar"
+      )), !confirmingDelete && /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          type: "button",
+          disabled: !canSave,
+          onClick: () => onSave({
+            id: (initial == null ? void 0 : initial.id) || uid(),
+            name: name.trim(),
+            category,
+            timeBlock: block,
+            createdAt: (initial == null ? void 0 : initial.createdAt) || fmtDate(/* @__PURE__ */ new Date())
+          }),
+          style: {
+            fontFamily: FONT_BODY,
+            background: canSave ? C.gold : C.border,
+            color: canSave ? C.onAccent : C.textFaint
+          },
+          className: "flex-1 rounded-xl py-3 text-sm font-semibold transition-colors"
+        },
+        isEdit ? "Guardar cambios" : "Agregar h\xE1bito"
+      ))
+    ));
+  }
+  function Onboarding({ onFinish }) {
+    const [step, setStep] = useState(0);
+    const [name, setName] = useState("");
+    const [chosenCats, setChosenCats] = useState([]);
+    const [chosenHabits, setChosenHabits] = useState([]);
+    const toggleCat = (id) => setChosenCats((prev) => prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]);
+    const toggleHabitSel = (key) => setChosenHabits((prev) => prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]);
+    const allSuggested = chosenCats.flatMap(
+      (catId) => (SUGGESTED[catId] || []).map((h) => ({ ...h, category: catId, key: `${catId}|${h.name}` }))
+    );
+    return /* @__PURE__ */ React.createElement("div", { className: "min-h-screen flex items-center justify-center px-5", style: { background: C.bg } }, /* @__PURE__ */ React.createElement("div", { className: "w-full max-w-sm" }, /* @__PURE__ */ React.createElement("div", { className: "text-center mb-8" }, /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_MONO, color: C.gold }, className: "text-xs tracking-widest uppercase mb-2" }, "Rumbo"), /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text }, className: "text-3xl" }, step === 0 && "\xBFC\xF3mo te llam\xE1s?", step === 1 && "\xBFQu\xE9 quer\xE9s trabajar?", step === 2 && "Eleg\xED tus primeros h\xE1bitos")), step === 0 && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        autoFocus: true,
+        value: name,
+        onChange: (e) => setName(e.target.value),
+        placeholder: "Tu nombre",
+        style: { fontFamily: FONT_BODY, background: C.card2, border: `1px solid ${C.border}`, color: C.text },
+        className: "w-full rounded-xl px-4 py-3.5 text-base mb-4 outline-none text-center",
+        onKeyDown: (e) => {
+          if (e.key === "Enter" && name.trim()) setStep(1);
+        }
+      }
+    ), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        type: "button",
+        disabled: !name.trim(),
+        onClick: () => setStep(1),
+        style: {
+          fontFamily: FONT_BODY,
+          background: name.trim() ? C.gold : C.border,
+          color: name.trim() ? C.onAccent : C.textFaint
+        },
+        className: "w-full rounded-xl py-3.5 text-sm font-semibold"
+      },
+      "Continuar"
+    )), step === 1 && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textMuted }, className: "text-sm text-center mb-5" }, "Eleg\xED una o m\xE1s \xE1reas. Despu\xE9s te sugerimos h\xE1bitos para empezar."), /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-2 justify-center mb-6" }, CATEGORIES.map((c) => /* @__PURE__ */ React.createElement(Chip, { key: c.id, active: chosenCats.includes(c.id), color: c.color, onClick: () => toggleCat(c.id) }, /* @__PURE__ */ React.createElement("span", { className: "rounded-full", style: { width: 6, height: 6, background: c.color } }), " ", c.label))), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        type: "button",
+        onClick: () => {
+          if (chosenCats.length > 0) setStep(2);
+          else onFinish({ name: name.trim(), habits: [] });
+        },
+        style: { fontFamily: FONT_BODY, background: C.gold, color: C.onAccent },
+        className: "w-full rounded-xl py-3.5 text-sm font-semibold mb-2"
+      },
+      "Continuar"
+    ), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        type: "button",
+        onClick: () => onFinish({ name: name.trim(), habits: [] }),
+        style: { fontFamily: FONT_BODY, color: C.textFaint },
+        className: "w-full py-2 text-xs"
+      },
+      "Omitir y empezar de cero"
+    )), step === 2 && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textMuted }, className: "text-sm text-center mb-5" }, "Toc\xE1 los que quieras sumar. Vas a poder editarlos despu\xE9s."), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-2 mb-6 max-h-72 overflow-y-auto pr-1" }, allSuggested.map((h) => {
+      const cat = CATEGORIES.find((c) => c.id === h.category);
+      const active = chosenHabits.includes(h.key);
+      return /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          key: h.key,
+          type: "button",
+          onClick: () => toggleHabitSel(h.key),
+          style: {
+            fontFamily: FONT_BODY,
+            background: active ? withAlpha(cat.color, 0.15) : C.card2,
+            border: `1px solid ${active ? withAlpha(cat.color, 0.6) : C.border}`,
+            color: active ? cat.color : C.textMuted
+          },
+          className: "flex items-center justify-between rounded-xl px-3.5 py-2.5 text-sm text-left"
+        },
+        /* @__PURE__ */ React.createElement("span", null, h.name),
+        active && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 15, lineHeight: 1 } }, "\u2713")
+      );
+    })), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        type: "button",
+        onClick: () => {
+          const habits = allSuggested.filter((h) => chosenHabits.includes(h.key)).map((h) => ({
+            id: uid(),
+            name: h.name,
+            category: h.category,
+            timeBlock: h.block,
+            createdAt: fmtDate(/* @__PURE__ */ new Date())
+          }));
+          onFinish({ name: name.trim(), habits });
+        },
+        style: { fontFamily: FONT_BODY, background: C.gold, color: C.onAccent },
+        className: "w-full rounded-xl py-3.5 text-sm font-semibold mb-2"
+      },
+      chosenHabits.length > 0 ? `Agregar ${chosenHabits.length} y empezar` : "Empezar"
+    ))));
+  }
+  function MonthlyChart({ points, daysInMonth }) {
+    const W = 300, H = 110, padL = 6, padR = 6, padT = 10, padB = 4;
+    const innerW = W - padL - padR;
+    const innerH = H - padT - padB;
+    const stepX = daysInMonth > 1 ? innerW / (daysInMonth - 1) : innerW;
+    const coords = points.map((p) => ({
+      x: padL + (p.day - 1) * stepX,
+      y: padT + innerH * (1 - p.pct / 100)
+    }));
+    const linePath = coords.length ? "M " + coords.map((c) => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(" L ") : "";
+    const areaPath = coords.length ? `${linePath} L ${coords[coords.length - 1].x.toFixed(1)},${(padT + innerH).toFixed(1)} L ${coords[0].x.toFixed(
+      1
+    )},${(padT + innerH).toFixed(1)} Z` : "";
+    return /* @__PURE__ */ React.createElement("svg", { viewBox: `0 0 ${W} ${H}`, className: "w-full", style: { height: 110, display: "block" } }, /* @__PURE__ */ React.createElement("defs", null, /* @__PURE__ */ React.createElement("linearGradient", { id: "chartFill", x1: "0", y1: "0", x2: "0", y2: "1" }, /* @__PURE__ */ React.createElement("stop", { offset: "0%", stopColor: C.gold, stopOpacity: "0.35" }), /* @__PURE__ */ React.createElement("stop", { offset: "100%", stopColor: C.gold, stopOpacity: "0" }))), [0, 0.5, 1].map((f) => /* @__PURE__ */ React.createElement(
+      "line",
+      {
+        key: f,
+        x1: padL,
+        x2: W - padR,
+        y1: padT + innerH * f,
+        y2: padT + innerH * f,
+        stroke: C.border,
+        strokeWidth: "1"
+      }
+    )), areaPath && /* @__PURE__ */ React.createElement("path", { d: areaPath, fill: "url(#chartFill)", stroke: "none" }), linePath && /* @__PURE__ */ React.createElement("path", { d: linePath, fill: "none", stroke: C.gold, strokeWidth: "2", strokeLinejoin: "round", strokeLinecap: "round" }), coords.length > 0 && /* @__PURE__ */ React.createElement("circle", { cx: coords[coords.length - 1].x, cy: coords[coords.length - 1].y, r: "3", fill: C.gold }));
+  }
+  function StatChip({ label, value }) {
+    return /* @__PURE__ */ React.createElement("div", { className: "flex-1 rounded-xl px-2 py-2.5 text-center", style: { background: C.card2 } }, /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_MONO, color: C.gold, fontSize: 15 }, className: "font-bold leading-none mb-1" }, value), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint, fontSize: 10 }, className: "leading-tight" }, label));
+  }
+  function HabitGrid({ habits, logs, year, month, onToggle }) {
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const todayKey = fmtDate(/* @__PURE__ */ new Date());
+    const dayKey = (d2) => {
+      const mm = String(month + 1).padStart(2, "0");
+      const dd = String(d2).padStart(2, "0");
+      return `${year}-${mm}-${dd}`;
+    };
+    const weekSpans = [];
+    let d = 1;
+    while (d <= daysInMonth) {
+      const span = Math.min(7, daysInMonth - d + 1);
+      weekSpans.push(span);
+      d += span;
+    }
+    if (habits.length === 0) return null;
+    return /* @__PURE__ */ React.createElement("div", { className: "overflow-x-auto -mx-1 px-1" }, /* @__PURE__ */ React.createElement("table", { style: { borderCollapse: "separate", borderSpacing: 3 } }, /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("th", { style: { minWidth: 100, background: C.card }, className: "sticky left-0 z-10" }), weekSpans.map((span, i) => /* @__PURE__ */ React.createElement(
+      "th",
+      {
+        key: i,
+        colSpan: span,
+        style: { fontFamily: FONT_MONO, color: C.textFaint, fontSize: 10 },
+        className: "text-center pb-1 font-normal whitespace-nowrap"
+      },
+      "Sem ",
+      i + 1
+    ))), /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement(
+      "th",
+      {
+        className: "sticky left-0 z-10 text-left pr-2 whitespace-nowrap",
+        style: { background: C.card, fontFamily: FONT_BODY, color: C.textFaint, fontSize: 11 }
+      },
+      "H\xE1bito"
+    ), Array.from({ length: daysInMonth }, (_, i) => i + 1).map((dnum) => /* @__PURE__ */ React.createElement(
+      "th",
+      {
+        key: dnum,
+        style: {
+          fontFamily: FONT_MONO,
+          color: dayKey(dnum) === todayKey ? C.gold : C.textFaint,
+          fontSize: 10,
+          width: 24
+        },
+        className: "font-normal pb-1"
+      },
+      dnum
+    )))), /* @__PURE__ */ React.createElement("tbody", null, habits.map((h) => {
+      const cat = CATEGORIES.find((c) => c.id === h.category) || CATEGORIES[0];
+      return /* @__PURE__ */ React.createElement("tr", { key: h.id }, /* @__PURE__ */ React.createElement(
+        "td",
+        {
+          className: "sticky left-0 z-10 pr-2",
+          style: { background: C.card, fontFamily: FONT_BODY, color: C.text, fontSize: 12, maxWidth: 112 }
+        },
+        /* @__PURE__ */ React.createElement("span", { className: "flex items-center gap-1.5" }, /* @__PURE__ */ React.createElement("span", { className: "rounded-full shrink-0", style: { width: 6, height: 6, background: cat.color } }), /* @__PURE__ */ React.createElement("span", { className: "truncate", style: { maxWidth: 90, display: "inline-block" } }, h.name))
+      ), Array.from({ length: daysInMonth }, (_, i) => i + 1).map((dnum) => {
+        const key = dayKey(dnum);
+        const isFuture = key > todayKey;
+        const done = Boolean(logs[key] && logs[key][h.id]);
+        return /* @__PURE__ */ React.createElement("td", { key: dnum, className: "text-center" }, /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            type: "button",
+            disabled: isFuture,
+            onClick: () => onToggle(h.id, key),
+            style: {
+              width: 20,
+              height: 20,
+              borderRadius: 5,
+              background: done ? cat.color : C.card2,
+              border: `1px solid ${done ? cat.color : C.border}`,
+              opacity: isFuture ? 0.35 : 1
+            }
+          }
+        ));
+      }));
+    }))));
+  }
+  function CheckinCard({ checkins, todayKey, onChange }) {
+    const [showHistory, setShowHistory] = useState(false);
+    const [expandedDay, setExpandedDay] = useState(null);
+    const today = checkins[todayKey] || {};
+    const update = (patch) => {
+      onChange({ ...checkins, [todayKey]: { ...today, ...patch } });
+    };
+    const history = Object.keys(checkins).filter((k) => k !== todayKey).sort((a, b) => a < b ? 1 : -1).slice(0, 14);
+    return /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-4 mb-5", style: { background: C.card, border: `1px solid ${C.borderSoft}` } }, /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textMuted }, className: "text-sm font-medium mb-3" }, "\xBFC\xF3mo estuvo tu d\xEDa?"), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between gap-2 mb-1.5" }, MOODS.map((m) => /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: m,
+        type: "button",
+        onClick: () => update({ mood: m }),
+        className: "flex-1 rounded-lg py-2.5 text-center transition-colors",
+        style: {
+          background: today.mood === m ? withAlpha(C.gold, 0.2) : C.card2,
+          border: `1px solid ${today.mood === m ? C.gold : C.border}`
+        }
+      },
+      /* @__PURE__ */ React.createElement(
+        "span",
+        {
+          style: { fontFamily: FONT_MONO, color: today.mood === m ? C.gold : C.textFaint },
+          className: "text-sm"
+        },
+        m
+      )
+    ))), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between mb-4" }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: FONT_BODY, color: C.textFaint, fontSize: 10 } }, "Muy mal"), /* @__PURE__ */ React.createElement("span", { style: { fontFamily: FONT_BODY, color: C.textFaint, fontSize: 10 } }, "Muy bien")), /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        value: today.word || "",
+        onChange: (e) => update({ word: e.target.value }),
+        placeholder: "Palabra o frase que refleje tu d\xEDa",
+        style: { fontFamily: FONT_BODY, background: C.card2, border: `1px solid ${C.border}`, color: C.text },
+        className: "w-full rounded-xl px-3.5 py-2.5 text-sm mb-2.5 outline-none"
+      }
+    ), /* @__PURE__ */ React.createElement(
+      "textarea",
+      {
+        value: today.moment || "",
+        onChange: (e) => update({ moment: e.target.value }),
+        placeholder: "Momento memorable para recordar",
+        rows: 2,
+        style: { fontFamily: FONT_BODY, background: C.card2, border: `1px solid ${C.border}`, color: C.text },
+        className: "w-full rounded-xl px-3.5 py-2.5 text-sm mb-1 outline-none resize-none"
+      }
+    ), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        type: "button",
+        onClick: () => setShowHistory((v) => !v),
+        style: { fontFamily: FONT_BODY, color: C.gold },
+        className: "text-xs mt-2"
+      },
+      showHistory ? "Ocultar d\xEDas anteriores" : "Ver d\xEDas anteriores"
+    ), showHistory && /* @__PURE__ */ React.createElement("div", { className: "mt-3 flex flex-col gap-1.5 max-h-56 overflow-y-auto" }, history.length === 0 && /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-xs" }, "Todav\xEDa no hay d\xEDas anteriores."), history.map((k) => {
+      const entry = checkins[k];
+      const isOpen = expandedDay === k;
+      const d = /* @__PURE__ */ new Date(k + "T00:00:00");
+      const label = d.toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+      return /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          key: k,
+          type: "button",
+          onClick: () => setExpandedDay(isOpen ? null : k),
+          style: { background: C.card2, border: `1px solid ${C.borderSoft}` },
+          className: "rounded-xl px-3 py-2 text-left"
+        },
+        /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between" }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: FONT_MONO, color: C.textFaint, fontSize: 11 } }, label), /* @__PURE__ */ React.createElement("span", { className: "flex items-center gap-1.5" }, entry.mood && /* @__PURE__ */ React.createElement("span", { style: { fontFamily: FONT_MONO, color: C.gold, fontSize: 11 } }, entry.mood, "/5"), /* @__PURE__ */ React.createElement("span", { style: { fontFamily: FONT_BODY, color: C.text, fontSize: 12 } }, entry.word || ""))),
+        isOpen && entry.moment && /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textMuted, fontSize: 12 }, className: "mt-1.5" }, entry.moment)
+      );
+    })));
+  }
+  function RitualView({ ritual, todayKey, onChange, onCompleteSapo }) {
+    const today = ritual[todayKey] || {};
+    const update = (patch) => {
+      onChange({ ...ritual, [todayKey]: { ...today, ...patch } });
+    };
+    const sapoStreak = useMemo(() => {
+      let streak = 0;
+      const isDoneOn = (key) => Boolean(ritual[key] && ritual[key].sapoDone);
+      const start = /* @__PURE__ */ new Date();
+      if (!isDoneOn(fmtDate(start))) start.setDate(start.getDate() - 1);
+      const cur = new Date(start);
+      let guard = 0;
+      while (guard < 3650) {
+        const key = fmtDate(cur);
+        if (isDoneOn(key)) {
+          streak++;
+          cur.setDate(cur.getDate() - 1);
+          guard++;
+        } else break;
+      }
+      return streak;
+    }, [ritual]);
+    return /* @__PURE__ */ React.createElement("div", { className: "pb-10" }, /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text }, className: "text-2xl mb-1" }, "Ritual matutino"), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm mb-5" }, "Tres minutos para arrancar con intenci\xF3n."), /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-4 mb-3", style: { background: C.card, border: `1px solid ${C.borderSoft}` } }, /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_MONO, color: C.gold, fontSize: 11 }, className: "uppercase tracking-wider mb-2" }, "Misi\xF3n de hoy"), /* @__PURE__ */ React.createElement(
+      "textarea",
+      {
+        value: today.mission || "",
+        onChange: (e) => update({ mission: e.target.value }),
+        placeholder: "\xBFQu\xE9 quer\xE9s lograr hoy, m\xE1s all\xE1 de las tareas?",
+        rows: 2,
+        style: { fontFamily: FONT_BODY, background: "transparent", color: C.text },
+        className: "w-full resize-none outline-none text-sm"
+      }
+    )), /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-4 mb-3", style: { background: C.card, border: `1px solid ${C.borderSoft}` } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-2" }, /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_MONO, color: C.rose, fontSize: 11 }, className: "uppercase tracking-wider" }, "Tu sapo de hoy"), sapoStreak > 0 && /* @__PURE__ */ React.createElement("span", { style: { fontFamily: FONT_MONO, color: C.gold, fontSize: 11 } }, "racha \xB7 ", sapoStreak, "d")), /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        value: today.sapo || "",
+        onChange: (e) => update({ sapo: e.target.value }),
+        placeholder: "La tarea m\xE1s importante e inc\xF3moda del d\xEDa",
+        style: { fontFamily: FONT_BODY, background: C.card2, border: `1px solid ${C.border}`, color: C.text },
+        className: "w-full rounded-xl px-3.5 py-2.5 text-sm mb-2.5 outline-none"
+      }
+    ), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        type: "button",
+        onClick: () => {
+          const wasDone = Boolean(today.sapoDone);
+          update({ sapoDone: !wasDone });
+          if (!wasDone) onCompleteSapo();
+        },
+        disabled: !today.sapo,
+        style: {
+          fontFamily: FONT_BODY,
+          background: today.sapoDone ? C.rose : C.card2,
+          border: `1px solid ${today.sapoDone ? C.rose : C.border}`,
+          color: today.sapoDone ? C.bg : C.textMuted,
+          opacity: today.sapo ? 1 : 0.5
+        },
+        className: "w-full rounded-xl py-2.5 text-sm font-semibold flex items-center justify-center gap-2"
+      },
+      today.sapoDone ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("span", null, "\u2713"), " Te lo comiste") : "Marcar como hecho"
+    )), /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-4", style: { background: C.card, border: `1px solid ${C.borderSoft}` } }, /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_MONO, color: C.sage, fontSize: 11 }, className: "uppercase tracking-wider mb-3" }, "Nivel de energ\xEDa"), /* @__PURE__ */ React.createElement("div", { className: "flex justify-between gap-2" }, [1, 2, 3, 4, 5].map((lvl) => /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: lvl,
+        type: "button",
+        onClick: () => update({ energy: lvl }),
+        className: "flex-1 rounded-lg py-2.5 text-center",
+        style: {
+          background: (today.energy || 0) >= lvl ? withAlpha(C.sage, 0.2) : C.card2,
+          border: `1px solid ${(today.energy || 0) >= lvl ? C.sage : C.border}`
+        }
+      },
+      /* @__PURE__ */ React.createElement("span", { style: { fontFamily: FONT_MONO, color: (today.energy || 0) >= lvl ? C.sage : C.textFaint } }, lvl)
+    )))));
+  }
+  function WheelChart({ values }) {
+    const size = 320;
+    const center = size / 2;
+    const maxR = 100;
+    const N = LIFE_AREAS.length;
+    const angleStep = 2 * Math.PI / N;
+    const pointFor = (i, val) => {
+      const angle = -Math.PI / 2 + i * angleStep;
+      const r = val / 10 * maxR;
+      return { x: center + r * Math.cos(angle), y: center + r * Math.sin(angle) };
+    };
+    const polygonPoints = LIFE_AREAS.map((_, i) => pointFor(i, values[i] || 0));
+    const polyStr = polygonPoints.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+    const rings = [2, 4, 6, 8, 10];
+    return /* @__PURE__ */ React.createElement("svg", { viewBox: `0 0 ${size} ${size}`, className: "w-full", style: { maxWidth: 320, margin: "0 auto", display: "block" } }, rings.map((ringVal) => {
+      const pts = LIFE_AREAS.map((_, i) => pointFor(i, ringVal));
+      const str = pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+      return /* @__PURE__ */ React.createElement("polygon", { key: ringVal, points: str, fill: "none", stroke: C.border, strokeWidth: "1" });
+    }), LIFE_AREAS.map((area, i) => {
+      const outer = pointFor(i, 10);
+      return /* @__PURE__ */ React.createElement("line", { key: area.id, x1: center, y1: center, x2: outer.x, y2: outer.y, stroke: C.border, strokeWidth: "1" });
+    }), /* @__PURE__ */ React.createElement("polygon", { points: polyStr, fill: withAlpha(C.gold, 0.25), stroke: C.gold, strokeWidth: "2" }), polygonPoints.map((p, i) => /* @__PURE__ */ React.createElement("circle", { key: i, cx: p.x, cy: p.y, r: "3", fill: C.gold })), LIFE_AREAS.map((area, i) => {
+      const labelPos = pointFor(i, 12.6);
+      return /* @__PURE__ */ React.createElement(
+        "text",
+        {
+          key: area.id,
+          x: labelPos.x,
+          y: labelPos.y,
+          textAnchor: "middle",
+          dominantBaseline: "middle",
+          fontSize: "8.5",
+          fill: C.textMuted
+        },
+        area.label
+      );
+    }));
+  }
+  function WheelView({ wheel, onChange }) {
+    const values = LIFE_AREAS.map((a) => wheel[a.id] || 5);
+    const update = (id, val) => {
+      onChange({ ...wheel, [id]: val });
+    };
+    return /* @__PURE__ */ React.createElement("div", { className: "pb-10" }, /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text }, className: "text-2xl mb-1" }, "Rueda de la vida"), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm mb-5" }, "Puntu\xE1 del 1 al 10 qu\xE9 tan conforme est\xE1s con cada \xE1rea hoy."), /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-4 mb-5", style: { background: C.card, border: `1px solid ${C.borderSoft}` } }, /* @__PURE__ */ React.createElement(WheelChart, { values })), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-4 rounded-2xl p-4", style: { background: C.card, border: `1px solid ${C.borderSoft}` } }, LIFE_AREAS.map((area) => /* @__PURE__ */ React.createElement("div", { key: area.id }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-1.5" }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: FONT_BODY, color: C.text }, className: "text-sm" }, area.label), /* @__PURE__ */ React.createElement("span", { style: { fontFamily: FONT_MONO, color: C.gold }, className: "text-sm" }, wheel[area.id] || 5)), /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        type: "range",
+        min: "1",
+        max: "10",
+        step: "1",
+        value: wheel[area.id] || 5,
+        onChange: (e) => update(area.id, Number(e.target.value)),
+        style: { accentColor: C.gold, width: "100%" }
+      }
+    )))));
+  }
+  function AgendaView({ agenda, onChange }) {
+    const [time, setTime] = useState("");
+    const [activity, setActivity] = useState("");
+    const [editingId, setEditingId] = useState(null);
+    const [editTime, setEditTime] = useState("");
+    const [editActivity, setEditActivity] = useState("");
+    const sorted = [...agenda].sort((a, b) => a.time.localeCompare(b.time));
+    const inputStyle = {
+      fontFamily: FONT_BODY,
+      background: C.card2,
+      border: `1px solid ${C.border}`,
+      color: C.text
+    };
+    const addItem = () => {
+      if (!time || !activity.trim()) return;
+      onChange([...agenda, { id: uid(), time, activity: activity.trim() }]);
+      setTime("");
+      setActivity("");
+    };
+    const startEdit = (item) => {
+      setEditingId(item.id);
+      setEditTime(item.time);
+      setEditActivity(item.activity);
+    };
+    const saveEdit = () => {
+      onChange(
+        agenda.map((a) => a.id === editingId ? { ...a, time: editTime, activity: editActivity.trim() } : a)
+      );
+      setEditingId(null);
+    };
+    const deleteItem = (id) => {
+      onChange(agenda.filter((a) => a.id !== id));
+      if (editingId === id) setEditingId(null);
+    };
+    return /* @__PURE__ */ React.createElement("div", { className: "pb-10" }, /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text }, className: "text-2xl mb-1" }, "Rutina"), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm mb-5" }, "Tu horario del d\xEDa, bloque por bloque."), /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-4 mb-5", style: { background: C.card, border: `1px solid ${C.borderSoft}` } }, /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mb-2.5" }, /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        type: "time",
+        value: time,
+        onChange: (e) => setTime(e.target.value),
+        style: { ...inputStyle, width: 118 },
+        className: "rounded-xl px-3 py-2.5 text-sm outline-none"
+      }
+    ), /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        type: "text",
+        value: activity,
+        onChange: (e) => setActivity(e.target.value),
+        placeholder: "Actividad",
+        style: inputStyle,
+        className: "flex-1 rounded-xl px-3.5 py-2.5 text-sm outline-none"
+      }
+    )), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        type: "button",
+        disabled: !time || !activity.trim(),
+        onClick: addItem,
+        style: {
+          fontFamily: FONT_BODY,
+          background: time && activity.trim() ? C.gold : C.border,
+          color: time && activity.trim() ? C.onAccent : C.textFaint
+        },
+        className: "w-full rounded-xl py-2.5 text-sm font-semibold"
+      },
+      "Agregar"
+    )), sorted.length === 0 ? /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm text-center py-6" }, "Todav\xEDa no armaste tu horario.") : /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-2" }, sorted.map(
+      (item) => editingId === item.id ? /* @__PURE__ */ React.createElement(
+        "div",
+        {
+          key: item.id,
+          className: "rounded-xl p-3",
+          style: { background: C.card2, border: `1px solid ${C.borderSoft}` }
+        },
+        /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mb-2" }, /* @__PURE__ */ React.createElement(
+          "input",
+          {
+            type: "time",
+            value: editTime,
+            onChange: (e) => setEditTime(e.target.value),
+            style: { ...inputStyle, background: C.card, width: 118 },
+            className: "rounded-lg px-3 py-2 text-sm outline-none"
+          }
+        ), /* @__PURE__ */ React.createElement(
+          "input",
+          {
+            type: "text",
+            value: editActivity,
+            onChange: (e) => setEditActivity(e.target.value),
+            style: { ...inputStyle, background: C.card },
+            className: "flex-1 rounded-lg px-3 py-2 text-sm outline-none"
+          }
+        )),
+        /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            type: "button",
+            onClick: saveEdit,
+            style: { fontFamily: FONT_BODY, background: C.gold, color: C.onAccent },
+            className: "flex-1 rounded-lg py-2 text-xs font-semibold"
+          },
+          "Guardar"
+        ), /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            type: "button",
+            onClick: () => setEditingId(null),
+            style: { fontFamily: FONT_BODY, background: C.border, color: C.text },
+            className: "flex-1 rounded-lg py-2 text-xs font-semibold"
+          },
+          "Cancelar"
+        ))
+      ) : /* @__PURE__ */ React.createElement(
+        "div",
+        {
+          key: item.id,
+          className: "flex items-center gap-3 rounded-xl px-3.5 py-3",
+          style: { background: C.card, border: `1px solid ${C.borderSoft}` }
+        },
+        /* @__PURE__ */ React.createElement("span", { style: { fontFamily: FONT_MONO, color: C.gold }, className: "text-sm shrink-0" }, item.time),
+        /* @__PURE__ */ React.createElement("span", { style: { fontFamily: FONT_BODY, color: C.text }, className: "text-sm flex-1 truncate" }, item.activity),
+        /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            type: "button",
+            onClick: () => startEdit(item),
+            style: { fontFamily: FONT_BODY, color: C.textFaint },
+            className: "text-xs shrink-0"
+          },
+          "Editar"
+        ),
+        /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            type: "button",
+            onClick: () => deleteItem(item.id),
+            style: { color: C.textFaint },
+            className: "shrink-0"
+          },
+          /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16, lineHeight: 1 } }, "\u2715")
+        )
+      )
+    )));
+  }
+  function FinanceView({ finance, onChange, monthKeyPrefix }) {
+    const [amount, setAmount] = useState("");
+    const [desc, setDesc] = useState("");
+    const [type, setType] = useState("gasto");
+    const transactions = finance.transactions || [];
+    const goal = finance.goal || { target: 0, current: 0 };
+    const monthTx = transactions.filter((t) => t.date.startsWith(monthKeyPrefix));
+    const ingresos = monthTx.filter((t) => t.type === "ingreso").reduce((s, t) => s + t.amount, 0);
+    const gastos = monthTx.filter((t) => t.type === "gasto").reduce((s, t) => s + t.amount, 0);
+    const balance = ingresos - gastos;
+    const goalPct = goal.target > 0 ? Math.min(100, Math.round(goal.current / goal.target * 100)) : 0;
+    const fmt = (n) => "$" + Math.round(n).toLocaleString("es-AR");
+    const addTx = () => {
+      const val = parseFloat(amount);
+      if (!val || !desc.trim()) return;
+      const tx = { id: uid(), type, amount: val, description: desc.trim(), date: fmtDate(/* @__PURE__ */ new Date()) };
+      onChange({ ...finance, transactions: [tx, ...transactions] });
+      setAmount("");
+      setDesc("");
+    };
+    const deleteTx = (id) => {
+      onChange({ ...finance, transactions: transactions.filter((t) => t.id !== id) });
+    };
+    const updateGoal = (patch) => {
+      onChange({ ...finance, goal: { ...goal, ...patch } });
+    };
+    const inputStyle = {
+      fontFamily: FONT_BODY,
+      background: C.card2,
+      border: `1px solid ${C.border}`,
+      color: C.text
+    };
+    return /* @__PURE__ */ React.createElement("div", { className: "pb-10" }, /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text }, className: "text-2xl mb-1" }, "Finanzas"), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm mb-5" }, "Tu resumen de este mes."), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mb-5" }, /* @__PURE__ */ React.createElement(StatChip, { label: "Ingresos", value: fmt(ingresos) }), /* @__PURE__ */ React.createElement(StatChip, { label: "Gastos", value: fmt(gastos) }), /* @__PURE__ */ React.createElement(StatChip, { label: "Balance", value: fmt(balance) })), /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-4 mb-5", style: { background: C.card, border: `1px solid ${C.borderSoft}` } }, /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_MONO, color: C.gold, fontSize: 11 }, className: "uppercase tracking-wider mb-3" }, "Meta de ahorro"), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mb-3" }, /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        type: "number",
+        inputMode: "decimal",
+        placeholder: "Meta",
+        value: goal.target || "",
+        onChange: (e) => updateGoal({ target: Number(e.target.value) || 0 }),
+        style: inputStyle,
+        className: "flex-1 rounded-xl px-3.5 py-2.5 text-sm outline-none"
+      }
+    ), /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        type: "number",
+        inputMode: "decimal",
+        placeholder: "Ahorrado",
+        value: goal.current || "",
+        onChange: (e) => updateGoal({ current: Number(e.target.value) || 0 }),
+        style: inputStyle,
+        className: "flex-1 rounded-xl px-3.5 py-2.5 text-sm outline-none"
+      }
+    )), /* @__PURE__ */ React.createElement("div", { className: "h-1.5 rounded-full w-full overflow-hidden mb-1.5", style: { background: C.card2 } }, /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        className: "h-full rounded-full",
+        style: {
+          width: `${goalPct}%`,
+          background: `linear-gradient(90deg, ${C.gold}, ${C.sage})`,
+          transition: "width 500ms ease"
+        }
+      }
+    )), goal.target > 0 && /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_MONO, color: C.textFaint }, className: "text-xs" }, goalPct, "% de ", fmt(goal.target))), /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-4 mb-5", style: { background: C.card, border: `1px solid ${C.borderSoft}` } }, /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mb-2.5" }, /* @__PURE__ */ React.createElement(Chip, { active: type === "gasto", color: C.rose, onClick: () => setType("gasto"), small: true }, "Gasto"), /* @__PURE__ */ React.createElement(Chip, { active: type === "ingreso", color: C.sage, onClick: () => setType("ingreso"), small: true }, "Ingreso")), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mb-2.5" }, /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        type: "number",
+        inputMode: "decimal",
+        placeholder: "Monto",
+        value: amount,
+        onChange: (e) => setAmount(e.target.value),
+        style: { ...inputStyle, width: 110 },
+        className: "rounded-xl px-3.5 py-2.5 text-sm outline-none"
+      }
+    ), /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        type: "text",
+        placeholder: "Descripci\xF3n",
+        value: desc,
+        onChange: (e) => setDesc(e.target.value),
+        style: inputStyle,
+        className: "flex-1 rounded-xl px-3.5 py-2.5 text-sm outline-none"
+      }
+    )), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        type: "button",
+        disabled: !amount || !desc.trim(),
+        onClick: addTx,
+        style: {
+          fontFamily: FONT_BODY,
+          background: amount && desc.trim() ? C.gold : C.border,
+          color: amount && desc.trim() ? C.onAccent : C.textFaint
+        },
+        className: "w-full rounded-xl py-2.5 text-sm font-semibold"
+      },
+      "Agregar"
+    )), monthTx.length === 0 ? /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm text-center py-6" }, "Todav\xEDa no registraste movimientos este mes.") : /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-2" }, monthTx.map((tx) => /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        key: tx.id,
+        className: "flex items-center justify-between gap-3 rounded-xl px-3.5 py-3",
+        style: { background: C.card, border: `1px solid ${C.borderSoft}` }
+      },
+      /* @__PURE__ */ React.createElement("div", { className: "min-w-0" }, /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.text }, className: "text-sm truncate" }, tx.description), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_MONO, color: C.textFaint, fontSize: 10 } }, tx.date.slice(8, 10), "/", tx.date.slice(5, 7))),
+      /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2.5 shrink-0" }, /* @__PURE__ */ React.createElement(
+        "span",
+        {
+          style: { fontFamily: FONT_MONO, color: tx.type === "ingreso" ? C.sage : C.rose },
+          className: "text-sm"
+        },
+        tx.type === "ingreso" ? "+" : "-",
+        fmt(tx.amount)
+      ), /* @__PURE__ */ React.createElement("button", { type: "button", onClick: () => deleteTx(tx.id), style: { color: C.textFaint } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 15, lineHeight: 1 } }, "\u2715")))
+    ))));
+  }
+  function NutritionView({ nutrition, onChange }) {
+    const [activeDay, setActiveDay] = useState(DAYS[weekdayIndex(/* @__PURE__ */ new Date())]);
+    const updateMeal = (meal, value) => {
+      const next = {
+        ...nutrition,
+        [activeDay]: { ...nutrition[activeDay] || {}, [meal]: value }
+      };
+      onChange(next);
+    };
+    return /* @__PURE__ */ React.createElement("div", { className: "pb-10" }, /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        className: "rounded-2xl p-4 mb-5",
+        style: { background: C.card, border: `1px solid ${C.borderSoft}`, borderLeft: `3px solid ${C.sage}` }
+      },
+      /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.text }, className: "text-sm font-medium mb-0.5" }, "Tu plan de nutrici\xF3n"),
+      /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textMuted }, className: "text-xs leading-relaxed" }, "Organizalo por d\xEDa y comida. Cuando me pases tu plan armado, lo cargamos ac\xE1 tal cual.")
+    ), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 overflow-x-auto pb-2 mb-4 -mx-1 px-1" }, DAYS.map((d) => /* @__PURE__ */ React.createElement(Chip, { key: d, active: activeDay === d, color: C.sage, onClick: () => setActiveDay(d), small: true }, d.slice(0, 3)))), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-3" }, MEALS.map((meal) => /* @__PURE__ */ React.createElement("div", { key: meal, className: "rounded-2xl p-4", style: { background: C.card, border: `1px solid ${C.borderSoft}` } }, /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_MONO, color: C.gold }, className: "text-xs uppercase tracking-wider mb-2" }, meal), /* @__PURE__ */ React.createElement(
+      "textarea",
+      {
+        value: nutrition[activeDay] && nutrition[activeDay][meal] || "",
+        onChange: (e) => updateMeal(meal, e.target.value),
+        placeholder: "Sin definir todav\xEDa",
+        rows: 2,
+        style: { fontFamily: FONT_BODY, background: "transparent", color: C.text },
+        className: "w-full resize-none outline-none text-sm placeholder-opacity-50"
+      }
+    )))));
+  }
+  function App() {
+    const [loading, setLoading] = useState(true);
+    const [profile, setProfile] = useState(null);
+    const [habits, setHabits] = useState([]);
+    const [logs, setLogs] = useState({});
+    const [nutrition, setNutrition] = useState({});
+    const [checkins, setCheckins] = useState({});
+    const [ritual, setRitual] = useState({});
+    const [wheel, setWheel] = useState({});
+    const [agenda, setAgenda] = useState([]);
+    const [finance, setFinance] = useState({ transactions: [], goal: { target: 0, current: 0 } });
+    const [tab, setTab] = useState("inicio");
+    const [filter, setFilter] = useState("todas");
+    const [sheet, setSheet] = useState(null);
+    const [bursts, setBursts] = useState([]);
+    const [celebrating, setCelebrating] = useState(false);
+    const [settingsOpen, setSettingsOpen] = useState(false);
+    const [editingName, setEditingName] = useState(false);
+    const [nameDraft, setNameDraft] = useState("");
+    const [resetConfirm, setResetConfirm] = useState(false);
+    useEffect(() => {
+      (async () => {
+        const [p, h, l, n, ck, rt, wh, ag, fi] = await Promise.all([
+          getItem("profile", null),
+          getItem("habits", []),
+          getItem("logs", {}),
+          getItem("nutrition", {}),
+          getItem("checkins", {}),
+          getItem("ritual", {}),
+          getItem("wheel", {}),
+          getItem("agenda", []),
+          getItem("finance", { transactions: [], goal: { target: 0, current: 0 } })
+        ]);
+        setProfile(p);
+        setHabits(h);
+        setLogs(l);
+        setNutrition(n);
+        setCheckins(ck);
+        setRitual(rt);
+        setWheel(wh);
+        setAgenda(ag);
+        setFinance(fi);
+        setLoading(false);
+      })();
+    }, []);
+    const now = /* @__PURE__ */ new Date();
+    const todayKey = fmtDate(now);
+    const todayLogs = logs[todayKey] || {};
+    const finishOnboarding = ({ name, habits: initialHabits }) => {
+      const p = { name };
+      setProfile(p);
+      setHabits(initialHabits);
+      setItem("profile", p);
+      setItem("habits", initialHabits);
+    };
+    const persistHabits = (next) => {
+      setHabits(next);
+      setItem("habits", next);
+    };
+    const persistLogs = (next) => {
+      const keys = Object.keys(next).sort();
+      let trimmed = next;
+      if (keys.length > 120) {
+        trimmed = {};
+        keys.slice(keys.length - 120).forEach((k) => trimmed[k] = next[k]);
+      }
+      setLogs(trimmed);
+      setItem("logs", trimmed);
+    };
+    const persistNutrition = (next) => {
+      setNutrition(next);
+      setItem("nutrition", next);
+    };
+    const persistCheckins = (next) => {
+      setCheckins(next);
+      setItem("checkins", next);
+    };
+    const persistRitual = (next) => {
+      setRitual(next);
+      setItem("ritual", next);
+    };
+    const persistWheel = (next) => {
+      setWheel(next);
+      setItem("wheel", next);
+    };
+    const persistAgenda = (next) => {
+      setAgenda(next);
+      setItem("agenda", next);
+    };
+    const persistFinance = (next) => {
+      setFinance(next);
+      setItem("finance", next);
+    };
+    const toggleHabitOnDate = (habitId, dateKey) => {
+      const dayLogs = logs[dateKey] || {};
+      const nextDayLogs = { ...dayLogs, [habitId]: !dayLogs[habitId] };
+      persistLogs({ ...logs, [dateKey]: nextDayLogs });
+    };
+    const getHabitStreak = useCallback(
+      (habitId) => {
+        let streak = 0;
+        const start = /* @__PURE__ */ new Date();
+        if (!(logs[fmtDate(start)] && logs[fmtDate(start)][habitId])) {
+          start.setDate(start.getDate() - 1);
+        }
+        const cur = new Date(start);
+        let guard = 0;
+        while (guard < 3650) {
+          const key = fmtDate(cur);
+          if (logs[key] && logs[key][habitId]) {
+            streak++;
+            cur.setDate(cur.getDate() - 1);
+            guard++;
+          } else break;
+        }
+        return streak;
+      },
+      [logs]
+    );
+    const dayStreak = useMemo(() => {
+      if (habits.length === 0) return 0;
+      let streak = 0;
+      const start = /* @__PURE__ */ new Date();
+      const allDoneOn = (key) => habits.every((h) => logs[key] && logs[key][h.id]);
+      if (!allDoneOn(fmtDate(start))) start.setDate(start.getDate() - 1);
+      const cur = new Date(start);
+      let guard = 0;
+      while (guard < 3650) {
+        const key = fmtDate(cur);
+        if (allDoneOn(key)) {
+          streak++;
+          cur.setDate(cur.getDate() - 1);
+          guard++;
+        } else break;
+      }
+      return streak;
+    }, [habits, logs]);
+    const pctFor = (list) => {
+      if (list.length === 0) return 0;
+      const done = list.filter((h) => todayLogs[h.id]).length;
+      return Math.round(done / list.length * 100);
+    };
+    const overallPct = pctFor(habits);
+    const fireBurst = useCallback((count) => {
+      if (prefersReducedMotion()) return;
+      setBursts((prev) => [...prev, makeBurst(count, [C.gold, C.rose, C.sage, C.violet, C.blue, C.teal])]);
+      setTimeout(() => setBursts((prev) => prev.slice(1)), 2600);
+    }, []);
+    const toggleHabit = (id) => {
+      const wasDone = Boolean(todayLogs[id]);
+      const nextDayLogs = { ...todayLogs, [id]: !wasDone };
+      const nextLogs = { ...logs, [todayKey]: nextDayLogs };
+      persistLogs(nextLogs);
+      if (!wasDone) {
+        fireBurst(22);
+        const willAllBeDone = habits.length > 0 && habits.every((h) => h.id === id ? true : nextDayLogs[h.id]);
+        if (willAllBeDone) {
+          setCelebrating(true);
+          fireBurst(70);
+          setTimeout(() => setCelebrating(false), 3200);
+        }
+      }
+    };
+    const panelYear = now.getFullYear();
+    const panelMonth = now.getMonth();
+    const panelDaysInMonth = new Date(panelYear, panelMonth + 1, 0).getDate();
+    const monthKeyPrefix = `${panelYear}-${String(panelMonth + 1).padStart(2, "0")}`;
+    const todayDayNum = now.getDate();
+    const dailyPercents = useMemo(() => {
+      const arr = [];
+      for (let d = 1; d <= todayDayNum; d++) {
+        const mm = String(panelMonth + 1).padStart(2, "0");
+        const dd = String(d).padStart(2, "0");
+        const key = `${panelYear}-${mm}-${dd}`;
+        const dayLogs = logs[key] || {};
+        const doneCount = habits.filter((h) => dayLogs[h.id]).length;
+        const pct = habits.length > 0 ? Math.round(doneCount / habits.length * 100) : 0;
+        arr.push({ day: d, pct });
+      }
+      return arr;
+    }, [logs, habits, todayDayNum, panelMonth, panelYear]);
+    const monthStats = useMemo(() => {
+      const totalPosible = habits.length * panelDaysInMonth;
+      let completados = 0;
+      for (let d = 1; d <= panelDaysInMonth; d++) {
+        const mm = String(panelMonth + 1).padStart(2, "0");
+        const dd = String(d).padStart(2, "0");
+        const key = `${panelYear}-${mm}-${dd}`;
+        const dayLogs = logs[key] || {};
+        completados += habits.filter((h) => dayLogs[h.id]).length;
+      }
+      const restantes = Math.max(totalPosible - completados, 0);
+      const promedio = totalPosible > 0 ? Math.round(completados / totalPosible * 100) : 0;
+      return { completados, restantes, promedio, dias: panelDaysInMonth };
+    }, [habits, logs, panelDaysInMonth, panelMonth, panelYear]);
+    const bestHabitOfMonth = useMemo(() => {
+      if (habits.length === 0 || todayDayNum === 0) return null;
+      let best = null;
+      for (const h of habits) {
+        let done = 0;
+        for (let d = 1; d <= todayDayNum; d++) {
+          const mm = String(panelMonth + 1).padStart(2, "0");
+          const dd = String(d).padStart(2, "0");
+          const key = `${panelYear}-${mm}-${dd}`;
+          if (logs[key] && logs[key][h.id]) done++;
+        }
+        const pct = Math.round(done / todayDayNum * 100);
+        if (!best || pct > best.pct) best = { habit: h, pct };
+      }
+      return best && best.pct > 0 ? best : null;
+    }, [habits, logs, todayDayNum, panelMonth, panelYear]);
+    const saveHabit = (habit) => {
+      const exists = habits.some((h) => h.id === habit.id);
+      const next = exists ? habits.map((h) => h.id === habit.id ? habit : h) : [...habits, habit];
+      persistHabits(next);
+      setSheet(null);
+    };
+    const deleteHabit = (id) => {
+      persistHabits(habits.filter((h) => h.id !== id));
+      setSheet(null);
+    };
+    const quote = QUOTES[dayOfYear(now) % QUOTES.length];
+    const greeting = now.getHours() < 12 ? "Buen d\xEDa" : now.getHours() < 19 ? "Buenas tardes" : "Buenas noches";
+    const dateLabel = now.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
+    const existingNames = habits.map((h) => h.name.toLowerCase());
+    if (loading) {
+      return /* @__PURE__ */ React.createElement("div", { className: "min-h-screen flex items-center justify-center", style: { background: C.bg } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: FONT_MONO, color: C.textFaint }, className: "text-sm" }, "Cargando..."));
+    }
+    if (!profile) {
+      return /* @__PURE__ */ React.createElement(Onboarding, { onFinish: finishOnboarding });
+    }
+    return /* @__PURE__ */ React.createElement("div", { style: { background: C.bg, minHeight: "100vh", fontFamily: FONT_BODY } }, /* @__PURE__ */ React.createElement(ConfettiLayer, { bursts }), celebrating && /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        className: "fixed top-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-2xl text-center",
+        style: { background: C.card2, border: `1px solid ${withAlpha(C.gold, 0.5)}` }
+      },
+      /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_DISPLAY, color: C.gold }, className: "text-base" }, "D\xEDa completo. Bien ah\xED. \u{1F389}")
+    ), /* @__PURE__ */ React.createElement("div", { className: "flex", style: { minHeight: "100vh" } }, /* @__PURE__ */ React.createElement(
+      "aside",
+      {
+        className: "shrink-0 flex flex-col",
+        style: { width: 108, background: C.bgSoft, borderRight: `1px solid ${C.border}` }
+      },
+      /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-6 pb-6" }, /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_MONO, color: C.gold }, className: "text-xs tracking-widest uppercase" }, "Rumbo")),
+      /* @__PURE__ */ React.createElement("nav", { className: "flex-1 flex flex-col gap-1 px-3" }, [
+        { id: "inicio", label: "Hoy" },
+        { id: "panel", label: "Panel" },
+        { id: "ritual", label: "Ritual" },
+        { id: "rutina", label: "Rutina" },
+        { id: "rueda", label: "Rueda" },
+        { id: "finanzas", label: "Finanzas" },
+        { id: "nutricion", label: "Nutrici\xF3n" }
+      ].map((t) => /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          key: t.id,
+          type: "button",
+          onClick: () => setTab(t.id),
+          style: {
+            fontFamily: FONT_BODY,
+            background: tab === t.id ? withAlpha(C.gold, 0.16) : "transparent",
+            color: tab === t.id ? C.gold : C.textMuted,
+            borderLeft: `2px solid ${tab === t.id ? C.gold : "transparent"}`
+          },
+          className: "text-left rounded-r-lg pl-3 pr-2 py-2.5 text-xs font-semibold transition-colors"
+        },
+        t.label
+      ))),
+      /* @__PURE__ */ React.createElement("div", { className: "px-3 pb-6 relative" }, /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          type: "button",
+          onClick: () => setSettingsOpen((v) => !v),
+          style: { fontFamily: FONT_BODY, color: C.textFaint },
+          className: "text-left rounded-lg px-3 py-2.5 text-xs w-full"
+        },
+        "Ajustes"
+      ), settingsOpen && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
+        "div",
+        {
+          className: "fixed inset-0 z-40",
+          onClick: () => {
+            setSettingsOpen(false);
+            setEditingName(false);
+            setResetConfirm(false);
+          }
+        }
+      ), /* @__PURE__ */ React.createElement(
+        "div",
+        {
+          className: "absolute left-full bottom-0 ml-2 z-50 rounded-2xl p-3 w-56",
+          style: { background: C.card2, border: `1px solid ${C.border}` }
+        },
+        !editingName && !resetConfirm && /* @__PURE__ */ React.createElement("div", { className: "flex flex-col" }, /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            type: "button",
+            onClick: () => {
+              setNameDraft(profile.name);
+              setEditingName(true);
+            },
+            style: { fontFamily: FONT_BODY, color: C.text },
+            className: "text-left text-sm py-2 px-1"
+          },
+          "Cambiar nombre"
+        ), /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            type: "button",
+            onClick: () => setResetConfirm(true),
+            style: { fontFamily: FONT_BODY, color: C.danger },
+            className: "text-left text-sm py-2 px-1"
+          },
+          "Reiniciar todos los datos"
+        )),
+        editingName && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(
+          "input",
+          {
+            autoFocus: true,
+            value: nameDraft,
+            onChange: (e) => setNameDraft(e.target.value),
+            style: {
+              fontFamily: FONT_BODY,
+              background: C.card,
+              border: `1px solid ${C.border}`,
+              color: C.text
+            },
+            className: "w-full rounded-lg px-2.5 py-2 text-sm mb-2 outline-none"
+          }
+        ), /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            type: "button",
+            onClick: () => {
+              const p = { ...profile, name: nameDraft.trim() || profile.name };
+              setProfile(p);
+              setItem("profile", p);
+              setEditingName(false);
+              setSettingsOpen(false);
+            },
+            style: { fontFamily: FONT_BODY, background: C.gold, color: C.onAccent },
+            className: "w-full rounded-lg py-2 text-xs font-semibold"
+          },
+          "Guardar"
+        )),
+        resetConfirm && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.text }, className: "text-xs mb-3" }, "Esto borra tus h\xE1bitos, historial y plan de nutrici\xF3n. No se puede deshacer."), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            type: "button",
+            onClick: async () => {
+              await setItem("profile", null);
+              await setItem("habits", []);
+              await setItem("logs", {});
+              await setItem("nutrition", {});
+              await setItem("checkins", {});
+              await setItem("ritual", {});
+              await setItem("wheel", {});
+              await setItem("agenda", []);
+              await setItem("finance", { transactions: [], goal: { target: 0, current: 0 } });
+              setProfile(null);
+              setHabits([]);
+              setLogs({});
+              setNutrition({});
+              setCheckins({});
+              setRitual({});
+              setWheel({});
+              setAgenda([]);
+              setFinance({ transactions: [], goal: { target: 0, current: 0 } });
+              setSettingsOpen(false);
+              setResetConfirm(false);
+            },
+            style: { fontFamily: FONT_BODY, background: C.danger, color: C.bg },
+            className: "flex-1 rounded-lg py-2 text-xs font-semibold"
+          },
+          "Borrar"
+        ), /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            type: "button",
+            onClick: () => setResetConfirm(false),
+            style: { fontFamily: FONT_BODY, background: C.border, color: C.text },
+            className: "flex-1 rounded-lg py-2 text-xs font-semibold"
+          },
+          "Cancelar"
+        )))
+      )))
+    ), /* @__PURE__ */ React.createElement("main", { className: "flex-1 min-w-0 px-5 sm:px-8 pt-6 pb-24 overflow-y-auto" }, /* @__PURE__ */ React.createElement("div", { className: "max-w-lg" }, tab === "inicio" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text }, className: "text-2xl mb-0.5 capitalize" }, greeting, ", ", profile.name), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm mb-5 capitalize" }, dateLabel), /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        className: "rounded-2xl p-4 mb-5",
+        style: { background: C.card, border: `1px solid ${C.borderSoft}` }
+      },
+      /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_MONO, color: C.gold }, className: "text-xs uppercase tracking-widest mb-1.5" }, "Frase del d\xEDa"),
+      /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_DISPLAY, color: C.text }, className: "text-base leading-snug" }, quote)
+    ), /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        className: "rounded-2xl p-4 mb-5 flex items-center gap-5",
+        style: { background: C.card, border: `1px solid ${C.borderSoft}` }
+      },
+      /* @__PURE__ */ React.createElement(DayRing, { pct: overallPct, streak: dayStreak }),
+      /* @__PURE__ */ React.createElement("div", { className: "flex-1 flex flex-col gap-3" }, TIME_BLOCKS.map((b) => /* @__PURE__ */ React.createElement(BlockBar, { key: b.id, block: b, pct: pctFor(habits.filter((h) => h.timeBlock === b.id)) })))
+    ), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 overflow-x-auto pb-2 mb-4 -mx-1 px-1" }, /* @__PURE__ */ React.createElement(Chip, { active: filter === "todas", color: C.gold, onClick: () => setFilter("todas"), small: true }, "Todas"), CATEGORIES.map((c) => /* @__PURE__ */ React.createElement(Chip, { key: c.id, active: filter === c.id, color: c.color, onClick: () => setFilter(c.id), small: true }, /* @__PURE__ */ React.createElement("span", { className: "rounded-full", style: { width: 6, height: 6, background: c.color } }), " ", c.label))), habits.length === 0 && /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        className: "rounded-2xl p-6 text-center mb-4",
+        style: { background: C.card, border: `1px dashed ${C.border}` }
+      },
+      /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textMuted }, className: "text-sm mb-3" }, "Todav\xEDa no ten\xE9s h\xE1bitos cargados."),
+      /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          type: "button",
+          onClick: () => setSheet({ mode: "create" }),
+          style: { fontFamily: FONT_BODY, background: C.gold, color: C.onAccent },
+          className: "rounded-xl px-4 py-2.5 text-sm font-semibold"
+        },
+        "Crear el primero"
+      )
+    ), TIME_BLOCKS.map((block) => {
+      const blockHabitsAll = habits.filter((h) => h.timeBlock === block.id);
+      const blockHabits = filter === "todas" ? blockHabitsAll : blockHabitsAll.filter((h) => h.category === filter);
+      if (habits.length > 0 && filter !== "todas" && blockHabits.length === 0) return null;
+      if (habits.length === 0) return null;
+      return /* @__PURE__ */ React.createElement("div", { key: block.id, className: "mb-6" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mb-2.5" }, /* @__PURE__ */ React.createElement("h2", { style: { fontFamily: FONT_BODY, color: C.textMuted }, className: "text-xs font-semibold uppercase tracking-wider" }, block.label)), blockHabits.length === 0 ? /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          type: "button",
+          onClick: () => setSheet({ mode: "create", presetBlock: block.id }),
+          style: { fontFamily: FONT_BODY, color: C.textFaint, border: `1px dashed ${C.border}` },
+          className: "w-full rounded-xl py-3 text-xs"
+        },
+        "Sin h\xE1bitos en ",
+        block.label.toLowerCase(),
+        " \xB7 agregar uno"
+      ) : /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-2" }, blockHabits.map((h) => /* @__PURE__ */ React.createElement(
+        HabitRow,
+        {
+          key: h.id,
+          habit: h,
+          done: Boolean(todayLogs[h.id]),
+          streak: getHabitStreak(h.id),
+          onToggle: toggleHabit,
+          onEdit: (hh) => setSheet({ mode: "edit", initial: hh }),
+          onDelete: deleteHabit
+        }
+      )), /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          type: "button",
+          onClick: () => setSheet({ mode: "create", presetBlock: block.id }),
+          style: { fontFamily: FONT_BODY, color: C.textFaint },
+          className: "flex items-center justify-center gap-1.5 py-2 text-xs"
+        },
+        /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700 } }, "+"),
+        " Agregar a ",
+        block.label.toLowerCase()
+      )));
+    })), tab === "panel" && /* @__PURE__ */ React.createElement("div", { className: "pb-10" }, /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text }, className: "text-2xl mb-0.5 capitalize" }, "Panel de h\xE1bitos"), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm mb-5 capitalize" }, now.toLocaleDateString("es-ES", { month: "long", year: "numeric" })), habits.length === 0 ? /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textMuted }, className: "text-sm text-center py-8" }, 'Agreg\xE1 h\xE1bitos en la pesta\xF1a "Hoy" para ver tu panel.') : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-4 mb-3", style: { background: C.card, border: `1px solid ${C.borderSoft}` } }, /* @__PURE__ */ React.createElement(MonthlyChart, { points: dailyPercents, daysInMonth: panelDaysInMonth })), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mb-5" }, /* @__PURE__ */ React.createElement(StatChip, { label: "Completados", value: monthStats.completados }), /* @__PURE__ */ React.createElement(StatChip, { label: "Restantes", value: monthStats.restantes }), /* @__PURE__ */ React.createElement(StatChip, { label: "Promedio", value: `${monthStats.promedio}%` }), /* @__PURE__ */ React.createElement(StatChip, { label: "D\xEDas del mes", value: monthStats.dias })), bestHabitOfMonth && /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        className: "rounded-2xl p-4 mb-5 flex items-center justify-between",
+        style: { background: C.card, border: `1px solid ${C.borderSoft}` }
+      },
+      /* @__PURE__ */ React.createElement("div", { className: "min-w-0 pr-3" }, /* @__PURE__ */ React.createElement(
+        "p",
+        {
+          style: { fontFamily: FONT_MONO, color: C.gold, fontSize: 11 },
+          className: "uppercase tracking-wider mb-1"
+        },
+        "Mejor h\xE1bito del mes"
+      ), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.text }, className: "text-sm font-medium truncate" }, bestHabitOfMonth.habit.name)),
+      /* @__PURE__ */ React.createElement("div", { className: "text-right shrink-0" }, /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_MONO, color: C.gold }, className: "text-xl font-bold leading-none" }, bestHabitOfMonth.pct, "%"), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint, fontSize: 10 } }, "cumplido"))
+    ), /* @__PURE__ */ React.createElement(CheckinCard, { checkins, todayKey, onChange: persistCheckins }), /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-3", style: { background: C.card, border: `1px solid ${C.borderSoft}` } }, /* @__PURE__ */ React.createElement(
+      "p",
+      {
+        style: { fontFamily: FONT_BODY, color: C.textMuted },
+        className: "text-xs font-semibold uppercase tracking-wider mb-3 px-1"
+      },
+      "Planilla del mes"
+    ), /* @__PURE__ */ React.createElement(
+      HabitGrid,
+      {
+        habits,
+        logs,
+        year: panelYear,
+        month: panelMonth,
+        onToggle: toggleHabitOnDate
+      }
+    )))), tab === "ritual" && /* @__PURE__ */ React.createElement(
+      RitualView,
+      {
+        ritual,
+        todayKey,
+        onChange: persistRitual,
+        onCompleteSapo: () => fireBurst(24)
+      }
+    ), tab === "rutina" && /* @__PURE__ */ React.createElement(AgendaView, { agenda, onChange: persistAgenda }), tab === "rueda" && /* @__PURE__ */ React.createElement(WheelView, { wheel, onChange: persistWheel }), tab === "finanzas" && /* @__PURE__ */ React.createElement(FinanceView, { finance, onChange: persistFinance, monthKeyPrefix }), tab === "nutricion" && /* @__PURE__ */ React.createElement(NutritionView, { nutrition, onChange: persistNutrition })))), tab === "inicio" && /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        type: "button",
+        onClick: () => setSheet({ mode: "create" }),
+        style: { background: C.gold, color: C.onAccent },
+        className: "fixed bottom-6 right-6 rounded-full w-14 h-14 flex items-center justify-center shadow-lg z-30"
+      },
+      /* @__PURE__ */ React.createElement("span", { style: { fontSize: 26, fontWeight: 700, lineHeight: 1 } }, "+")
+    ), sheet && /* @__PURE__ */ React.createElement(
+      HabitSheet,
+      {
+        initial: sheet.mode === "edit" ? sheet.initial : { timeBlock: sheet.presetBlock },
+        onClose: () => setSheet(null),
+        onSave: saveHabit,
+        onDelete: deleteHabit,
+        existingNames
+      }
+    ));
+  }
+  var rootEl = document.getElementById("root");
+  ReactDOM.createRoot(rootEl).render(/* @__PURE__ */ React.createElement(App, null));
+})();
+</script>
+</body>
+</html>
