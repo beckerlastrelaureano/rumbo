@@ -1,4 +1,4 @@
-const CACHE_NAME = "rumbo-cache-v4";
+const CACHE_NAME = "rumbo-cache-v5";
 const APP_SHELL = [
   "./rumbo.html",
   "./manifest.json",

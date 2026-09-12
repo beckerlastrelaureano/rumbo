@@ -378,17 +378,54 @@
       }
     ))));
   }
-  function HabitRow({ habit, done, streak, onToggle, onEdit, onDelete }) {
+  function HabitCard({ habit, done, streak, onToggle, onEdit, onDelete }) {
     const [menuOpen, setMenuOpen] = useState(false);
     const [confirming, setConfirming] = useState(false);
     const cat = CATEGORIES.find((c) => c.id === habit.category) || CATEGORIES[0];
     return /* @__PURE__ */ React.createElement(
       "div",
       {
-        className: "flex items-center gap-3 rounded-2xl px-3 py-3 relative",
-        style: { background: C.card, border: `1px solid ${C.borderSoft}` }
+        className: "relative rounded-2xl p-3.5 flex flex-col justify-between",
+        style: {
+          background: done ? cat.color : withAlpha(cat.color, 0.14),
+          border: `1px solid ${done ? cat.color : C.borderSoft}`,
+          minHeight: 108,
+          transition: "background 200ms ease, border-color 200ms ease"
+        }
       },
       /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          type: "button",
+          onClick: () => setMenuOpen((v) => !v),
+          style: { color: done ? withAlpha(C.bg, 0.6) : C.textFaint },
+          className: "absolute top-2 right-2 p-1",
+          "aria-label": "M\xE1s opciones"
+        },
+        /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16, lineHeight: 1 } }, "\u22EE")
+      ),
+      /* @__PURE__ */ React.createElement("div", { className: "pr-4" }, /* @__PURE__ */ React.createElement(
+        "span",
+        {
+          className: "rounded-full inline-block mb-2",
+          style: { width: 8, height: 8, background: done ? C.bg : cat.color, opacity: done ? 0.55 : 1 }
+        }
+      ), /* @__PURE__ */ React.createElement(
+        "p",
+        {
+          style: { fontFamily: FONT_BODY, color: done ? C.bg : C.text },
+          className: "text-sm font-semibold leading-snug"
+        },
+        habit.name
+      )),
+      /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mt-3" }, streak >= 2 ? /* @__PURE__ */ React.createElement(
+        "span",
+        {
+          style: { fontFamily: FONT_MONO, color: done ? withAlpha(C.bg, 0.65) : C.textFaint, fontSize: 10 }
+        },
+        streak,
+        "d"
+      ) : /* @__PURE__ */ React.createElement("span", null), /* @__PURE__ */ React.createElement(
         "button",
         {
           type: "button",
@@ -396,60 +433,21 @@
           "aria-label": done ? "Marcar como no hecho" : "Marcar como hecho",
           className: "flex items-center justify-center rounded-full shrink-0 transition-transform active:scale-90",
           style: {
-            width: 30,
-            height: 30,
-            border: `2px solid ${done ? cat.color : C.border}`,
-            background: done ? cat.color : "transparent"
+            width: 27,
+            height: 27,
+            border: `2px solid ${done ? C.bg : cat.color}`,
+            background: done ? C.bg : "transparent"
           }
         },
-        done && /* @__PURE__ */ React.createElement("span", { style: { color: C.bg, fontSize: 14, fontWeight: 900, lineHeight: 1 } }, "\u2713")
-      ),
-      /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0" }, /* @__PURE__ */ React.createElement(
-        "p",
-        {
-          style: {
-            fontFamily: FONT_BODY,
-            color: done ? C.textFaint : C.text,
-            textDecoration: done ? "line-through" : "none"
-          },
-          className: "text-sm font-medium truncate"
-        },
-        habit.name
-      ), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mt-0.5" }, /* @__PURE__ */ React.createElement(
-        "span",
-        {
-          className: "inline-flex items-center gap-1 text-xs",
-          style: { fontFamily: FONT_BODY, color: cat.color }
-        },
-        /* @__PURE__ */ React.createElement("span", { className: "rounded-full", style: { width: 6, height: 6, background: cat.color } }),
-        cat.label
-      ), streak >= 2 && /* @__PURE__ */ React.createElement(
-        "span",
-        {
-          className: "inline-flex items-center text-xs",
-          style: { fontFamily: FONT_MONO, color: C.gold }
-        },
-        streak,
-        "d"
-      ))),
-      /* @__PURE__ */ React.createElement(
-        "button",
-        {
-          type: "button",
-          onClick: () => setMenuOpen((v) => !v),
-          style: { color: C.textFaint },
-          className: "p-1.5 shrink-0",
-          "aria-label": "M\xE1s opciones"
-        },
-        /* @__PURE__ */ React.createElement("span", { style: { fontSize: 20, lineHeight: 1 } }, "\u22EE")
-      ),
+        done && /* @__PURE__ */ React.createElement("span", { style: { color: cat.color, fontSize: 13, fontWeight: 900, lineHeight: 1 } }, "\u2713")
+      )),
       menuOpen && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 z-30", onClick: () => {
         setMenuOpen(false);
         setConfirming(false);
       } }), /* @__PURE__ */ React.createElement(
         "div",
         {
-          className: "absolute right-2 top-12 z-40 rounded-xl overflow-hidden",
+          className: "absolute right-2 top-9 z-40 rounded-xl overflow-hidden",
           style: { background: C.card2, border: `1px solid ${C.border}`, minWidth: 160 }
         },
         !confirming ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
@@ -1283,6 +1281,543 @@
       ), /* @__PURE__ */ React.createElement("button", { type: "button", onClick: () => deleteTx(tx.id), style: { color: C.textFaint } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 15, lineHeight: 1 } }, "\u2715")))
     ))));
   }
+  function WorkoutView({ exercises, onChangeExercises, workoutLogs, todayKey, onToggle }) {
+    const [name, setName] = useState("");
+    const [sets, setSets] = useState("");
+    const [reps, setReps] = useState("");
+    const [group, setGroup] = useState("");
+    const [editingId, setEditingId] = useState(null);
+    const [editName, setEditName] = useState("");
+    const [editSets, setEditSets] = useState("");
+    const [editReps, setEditReps] = useState("");
+    const [editGroup, setEditGroup] = useState("");
+    const todayLogs = workoutLogs[todayKey] || {};
+    const inputStyle = { fontFamily: FONT_BODY, background: C.card2, border: `1px solid ${C.border}`, color: C.text };
+    const addExercise = () => {
+      if (!name.trim()) return;
+      onChangeExercises([
+        ...exercises,
+        { id: uid(), name: name.trim(), sets: sets.trim(), reps: reps.trim(), group: group.trim() }
+      ]);
+      setName("");
+      setSets("");
+      setReps("");
+      setGroup("");
+    };
+    const startEdit = (ex) => {
+      setEditingId(ex.id);
+      setEditName(ex.name);
+      setEditSets(ex.sets || "");
+      setEditReps(ex.reps || "");
+      setEditGroup(ex.group || "");
+    };
+    const saveEdit = () => {
+      onChangeExercises(
+        exercises.map(
+          (e) => e.id === editingId ? { ...e, name: editName.trim(), sets: editSets.trim(), reps: editReps.trim(), group: editGroup.trim() } : e
+        )
+      );
+      setEditingId(null);
+    };
+    const deleteExercise = (id) => {
+      onChangeExercises(exercises.filter((e) => e.id !== id));
+      if (editingId === id) setEditingId(null);
+    };
+    const grouped = {};
+    exercises.forEach((ex) => {
+      const g = ex.group || "General";
+      if (!grouped[g]) grouped[g] = [];
+      grouped[g].push(ex);
+    });
+    return /* @__PURE__ */ React.createElement("div", { className: "pb-10" }, /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text }, className: "text-2xl mb-1" }, "Entrenamiento"), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm mb-5" }, "Tu rutina de ejercicios."), /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-4 mb-5", style: { background: C.card, border: `1px solid ${C.borderSoft}` } }, /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        value: name,
+        onChange: (e) => setName(e.target.value),
+        placeholder: "Ejercicio",
+        style: inputStyle,
+        className: "w-full rounded-xl px-3.5 py-2.5 text-sm outline-none mb-2.5"
+      }
+    ), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mb-2.5" }, /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        value: sets,
+        onChange: (e) => setSets(e.target.value),
+        placeholder: "Series",
+        style: inputStyle,
+        className: "flex-1 rounded-xl px-3.5 py-2.5 text-sm outline-none"
+      }
+    ), /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        value: reps,
+        onChange: (e) => setReps(e.target.value),
+        placeholder: "Reps",
+        style: inputStyle,
+        className: "flex-1 rounded-xl px-3.5 py-2.5 text-sm outline-none"
+      }
+    ), /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        value: group,
+        onChange: (e) => setGroup(e.target.value),
+        placeholder: "D\xEDa/grupo",
+        style: inputStyle,
+        className: "flex-1 rounded-xl px-3.5 py-2.5 text-sm outline-none"
+      }
+    )), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        type: "button",
+        disabled: !name.trim(),
+        onClick: addExercise,
+        style: {
+          fontFamily: FONT_BODY,
+          background: name.trim() ? C.gold : C.border,
+          color: name.trim() ? C.onAccent : C.textFaint
+        },
+        className: "w-full rounded-xl py-2.5 text-sm font-semibold"
+      },
+      "Agregar"
+    )), exercises.length === 0 ? /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm text-center py-6" }, "Todav\xEDa no cargaste ejercicios.") : Object.keys(grouped).map((g) => /* @__PURE__ */ React.createElement("div", { key: g, className: "mb-6" }, /* @__PURE__ */ React.createElement(
+      "h2",
+      {
+        style: { fontFamily: FONT_BODY, color: C.textMuted },
+        className: "text-xs font-semibold uppercase tracking-wider mb-2.5"
+      },
+      g
+    ), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-2" }, grouped[g].map(
+      (ex) => editingId === ex.id ? /* @__PURE__ */ React.createElement(
+        "div",
+        {
+          key: ex.id,
+          className: "rounded-xl p-3",
+          style: { background: C.card2, border: `1px solid ${C.borderSoft}` }
+        },
+        /* @__PURE__ */ React.createElement(
+          "input",
+          {
+            value: editName,
+            onChange: (e) => setEditName(e.target.value),
+            style: { ...inputStyle, background: C.card },
+            className: "w-full rounded-lg px-3 py-2 text-sm outline-none mb-2"
+          }
+        ),
+        /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mb-2" }, /* @__PURE__ */ React.createElement(
+          "input",
+          {
+            value: editSets,
+            onChange: (e) => setEditSets(e.target.value),
+            placeholder: "Series",
+            style: { ...inputStyle, background: C.card },
+            className: "flex-1 rounded-lg px-3 py-2 text-sm outline-none"
+          }
+        ), /* @__PURE__ */ React.createElement(
+          "input",
+          {
+            value: editReps,
+            onChange: (e) => setEditReps(e.target.value),
+            placeholder: "Reps",
+            style: { ...inputStyle, background: C.card },
+            className: "flex-1 rounded-lg px-3 py-2 text-sm outline-none"
+          }
+        ), /* @__PURE__ */ React.createElement(
+          "input",
+          {
+            value: editGroup,
+            onChange: (e) => setEditGroup(e.target.value),
+            placeholder: "D\xEDa/grupo",
+            style: { ...inputStyle, background: C.card },
+            className: "flex-1 rounded-lg px-3 py-2 text-sm outline-none"
+          }
+        )),
+        /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            type: "button",
+            onClick: saveEdit,
+            style: { fontFamily: FONT_BODY, background: C.gold, color: C.onAccent },
+            className: "flex-1 rounded-lg py-2 text-xs font-semibold"
+          },
+          "Guardar"
+        ), /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            type: "button",
+            onClick: () => deleteExercise(ex.id),
+            style: { fontFamily: FONT_BODY, background: C.danger, color: C.bg },
+            className: "flex-1 rounded-lg py-2 text-xs font-semibold"
+          },
+          "Eliminar"
+        ), /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            type: "button",
+            onClick: () => setEditingId(null),
+            style: { fontFamily: FONT_BODY, background: C.border, color: C.text },
+            className: "flex-1 rounded-lg py-2 text-xs font-semibold"
+          },
+          "Cancelar"
+        ))
+      ) : /* @__PURE__ */ React.createElement(
+        "div",
+        {
+          key: ex.id,
+          className: "flex items-center gap-3 rounded-xl px-3.5 py-3",
+          style: { background: C.card, border: `1px solid ${C.borderSoft}` }
+        },
+        /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            type: "button",
+            onClick: () => onToggle(ex.id),
+            className: "flex items-center justify-center rounded-full shrink-0",
+            style: {
+              width: 28,
+              height: 28,
+              border: `2px solid ${todayLogs[ex.id] ? C.teal : C.border}`,
+              background: todayLogs[ex.id] ? C.teal : "transparent"
+            }
+          },
+          todayLogs[ex.id] && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: C.bg, fontWeight: 900 } }, "\u2713")
+        ),
+        /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0" }, /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.text }, className: "text-sm truncate" }, ex.name), (ex.sets || ex.reps) && /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_MONO, color: C.textFaint, fontSize: 11 } }, ex.sets, ex.sets && ex.reps ? " x " : "", ex.reps)),
+        /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            type: "button",
+            onClick: () => startEdit(ex),
+            style: { fontFamily: FONT_BODY, color: C.textFaint },
+            className: "text-xs shrink-0"
+          },
+          "Editar"
+        )
+      )
+    )))));
+  }
+  function GoalsView({ goals, onChange }) {
+    const [title, setTitle] = useState("");
+    const [deadline, setDeadline] = useState("");
+    const [editingId, setEditingId] = useState(null);
+    const [editTitle, setEditTitle] = useState("");
+    const [editDeadline, setEditDeadline] = useState("");
+    const inputStyle = { fontFamily: FONT_BODY, background: C.card2, border: `1px solid ${C.border}`, color: C.text };
+    const addGoal = () => {
+      if (!title.trim()) return;
+      onChange([...goals, { id: uid(), title: title.trim(), deadline, progress: 0, done: false }]);
+      setTitle("");
+      setDeadline("");
+    };
+    const updateProgress = (id, val) => {
+      onChange(goals.map((g) => g.id === id ? { ...g, progress: val, done: val >= 100 } : g));
+    };
+    const toggleDone = (id) => {
+      onChange(
+        goals.map((g) => g.id === id ? { ...g, done: !g.done, progress: !g.done ? 100 : g.progress } : g)
+      );
+    };
+    const startEdit = (g) => {
+      setEditingId(g.id);
+      setEditTitle(g.title);
+      setEditDeadline(g.deadline || "");
+    };
+    const saveEdit = () => {
+      onChange(goals.map((g) => g.id === editingId ? { ...g, title: editTitle.trim(), deadline: editDeadline } : g));
+      setEditingId(null);
+    };
+    const deleteGoal = (id) => {
+      onChange(goals.filter((g) => g.id !== id));
+      if (editingId === id) setEditingId(null);
+    };
+    const active = goals.filter((g) => !g.done);
+    const done = goals.filter((g) => g.done);
+    return /* @__PURE__ */ React.createElement("div", { className: "pb-10" }, /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text }, className: "text-2xl mb-1" }, "Objetivos y metas"), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm mb-5" }, "Tus metas a mediano y largo plazo."), /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-4 mb-5", style: { background: C.card, border: `1px solid ${C.borderSoft}` } }, /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        value: title,
+        onChange: (e) => setTitle(e.target.value),
+        placeholder: "\xBFQu\xE9 quer\xE9s lograr?",
+        style: inputStyle,
+        className: "w-full rounded-xl px-3.5 py-2.5 text-sm outline-none mb-2.5"
+      }
+    ), /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        type: "date",
+        value: deadline,
+        onChange: (e) => setDeadline(e.target.value),
+        style: inputStyle,
+        className: "w-full rounded-xl px-3.5 py-2.5 text-sm outline-none mb-2.5"
+      }
+    ), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        type: "button",
+        disabled: !title.trim(),
+        onClick: addGoal,
+        style: {
+          fontFamily: FONT_BODY,
+          background: title.trim() ? C.gold : C.border,
+          color: title.trim() ? C.onAccent : C.textFaint
+        },
+        className: "w-full rounded-xl py-2.5 text-sm font-semibold"
+      },
+      "Agregar meta"
+    )), active.length === 0 && done.length === 0 && /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm text-center py-6" }, "Todav\xEDa no cargaste objetivos."), active.map(
+      (g) => editingId === g.id ? /* @__PURE__ */ React.createElement(
+        "div",
+        {
+          key: g.id,
+          className: "rounded-2xl p-4 mb-3",
+          style: { background: C.card2, border: `1px solid ${C.borderSoft}` }
+        },
+        /* @__PURE__ */ React.createElement(
+          "input",
+          {
+            value: editTitle,
+            onChange: (e) => setEditTitle(e.target.value),
+            style: { ...inputStyle, background: C.card },
+            className: "w-full rounded-lg px-3 py-2 text-sm outline-none mb-2"
+          }
+        ),
+        /* @__PURE__ */ React.createElement(
+          "input",
+          {
+            type: "date",
+            value: editDeadline,
+            onChange: (e) => setEditDeadline(e.target.value),
+            style: { ...inputStyle, background: C.card },
+            className: "w-full rounded-lg px-3 py-2 text-sm outline-none mb-2"
+          }
+        ),
+        /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            type: "button",
+            onClick: saveEdit,
+            style: { fontFamily: FONT_BODY, background: C.gold, color: C.onAccent },
+            className: "flex-1 rounded-lg py-2 text-xs font-semibold"
+          },
+          "Guardar"
+        ), /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            type: "button",
+            onClick: () => deleteGoal(g.id),
+            style: { fontFamily: FONT_BODY, background: C.danger, color: C.bg },
+            className: "flex-1 rounded-lg py-2 text-xs font-semibold"
+          },
+          "Eliminar"
+        ), /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            type: "button",
+            onClick: () => setEditingId(null),
+            style: { fontFamily: FONT_BODY, background: C.border, color: C.text },
+            className: "flex-1 rounded-lg py-2 text-xs font-semibold"
+          },
+          "Cancelar"
+        ))
+      ) : /* @__PURE__ */ React.createElement(
+        "div",
+        {
+          key: g.id,
+          className: "rounded-2xl p-4 mb-3",
+          style: { background: C.card, border: `1px solid ${C.borderSoft}` }
+        },
+        /* @__PURE__ */ React.createElement("div", { className: "flex items-start justify-between gap-2 mb-2" }, /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.text }, className: "text-sm font-medium flex-1" }, g.title), /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            type: "button",
+            onClick: () => toggleDone(g.id),
+            className: "flex items-center justify-center rounded-full shrink-0",
+            style: { width: 24, height: 24, border: `2px solid ${C.gold}`, background: "transparent" },
+            "aria-label": "Marcar como cumplida"
+          }
+        )),
+        g.deadline && /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_MONO, color: C.textFaint, fontSize: 11 }, className: "mb-2" }, "Fecha l\xEDmite: ", g.deadline),
+        /* @__PURE__ */ React.createElement("div", { className: "h-1.5 rounded-full w-full overflow-hidden mb-1.5", style: { background: C.card2 } }, /* @__PURE__ */ React.createElement(
+          "div",
+          {
+            className: "h-full rounded-full",
+            style: {
+              width: `${g.progress}%`,
+              background: `linear-gradient(90deg, ${C.gold}, ${C.violet})`,
+              transition: "width 400ms ease"
+            }
+          }
+        )),
+        /* @__PURE__ */ React.createElement(
+          "input",
+          {
+            type: "range",
+            min: "0",
+            max: "100",
+            step: "5",
+            value: g.progress,
+            onChange: (e) => updateProgress(g.id, Number(e.target.value)),
+            style: { accentColor: C.gold, width: "100%" }
+          }
+        ),
+        /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mt-1" }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: FONT_MONO, color: C.textFaint }, className: "text-xs" }, g.progress, "%"), /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            type: "button",
+            onClick: () => startEdit(g),
+            style: { fontFamily: FONT_BODY, color: C.textFaint },
+            className: "text-xs"
+          },
+          "Editar"
+        ))
+      )
+    ), done.length > 0 && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
+      "h2",
+      {
+        style: { fontFamily: FONT_BODY, color: C.textMuted },
+        className: "text-xs font-semibold uppercase tracking-wider mb-2.5 mt-4"
+      },
+      "Cumplidas"
+    ), done.map((g) => /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        key: g.id,
+        className: "rounded-xl px-3.5 py-3 mb-2 flex items-center justify-between",
+        style: { background: C.card2, border: `1px solid ${C.borderSoft}` }
+      },
+      /* @__PURE__ */ React.createElement("span", { style: { fontFamily: FONT_BODY, color: C.textFaint, textDecoration: "line-through" }, className: "text-sm" }, g.title),
+      /* @__PURE__ */ React.createElement("button", { type: "button", onClick: () => deleteGoal(g.id), style: { color: C.textFaint } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 15, lineHeight: 1 } }, "\u2715"))
+    ))));
+  }
+  function NotesView({ notes, onChange }) {
+    const [text, setText] = useState("");
+    const addNote = () => {
+      if (!text.trim()) return;
+      onChange([{ id: uid(), text: text.trim(), createdAt: (/* @__PURE__ */ new Date()).toISOString() }, ...notes]);
+      setText("");
+    };
+    const deleteNote = (id) => onChange(notes.filter((n) => n.id !== id));
+    return /* @__PURE__ */ React.createElement("div", { className: "pb-10" }, /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text }, className: "text-2xl mb-1" }, "Anotaciones"), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm mb-5" }, "Notas r\xE1pidas, ideas, lo que se te cruce."), /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-4 mb-5", style: { background: C.card, border: `1px solid ${C.borderSoft}` } }, /* @__PURE__ */ React.createElement(
+      "textarea",
+      {
+        value: text,
+        onChange: (e) => setText(e.target.value),
+        placeholder: "Escrib\xED algo...",
+        rows: 3,
+        style: { fontFamily: FONT_BODY, background: C.card2, border: `1px solid ${C.border}`, color: C.text },
+        className: "w-full rounded-xl px-3.5 py-2.5 text-sm outline-none mb-2.5 resize-none"
+      }
+    ), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        type: "button",
+        disabled: !text.trim(),
+        onClick: addNote,
+        style: {
+          fontFamily: FONT_BODY,
+          background: text.trim() ? C.gold : C.border,
+          color: text.trim() ? C.onAccent : C.textFaint
+        },
+        className: "w-full rounded-xl py-2.5 text-sm font-semibold"
+      },
+      "Guardar nota"
+    )), notes.length === 0 ? /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm text-center py-6" }, "Todav\xEDa no escribiste nada.") : /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-2" }, notes.map((n) => /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        key: n.id,
+        className: "rounded-xl p-3.5",
+        style: { background: C.card, border: `1px solid ${C.borderSoft}` }
+      },
+      /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.text }, className: "text-sm whitespace-pre-wrap mb-1.5" }, n.text),
+      /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between" }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: FONT_MONO, color: C.textFaint, fontSize: 10 } }, new Date(n.createdAt).toLocaleString("es-ES", {
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit"
+      })), /* @__PURE__ */ React.createElement("button", { type: "button", onClick: () => deleteNote(n.id), style: { color: C.textFaint } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 15, lineHeight: 1 } }, "\u2715")))
+    ))));
+  }
+  function WeekPlannerView({ weekPlan, onChange }) {
+    const [activeDay, setActiveDay] = useState(DAYS[weekdayIndex(/* @__PURE__ */ new Date())]);
+    const [text, setText] = useState("");
+    const dayTasks = weekPlan[activeDay] || [];
+    const addTask = () => {
+      if (!text.trim()) return;
+      onChange({ ...weekPlan, [activeDay]: [...dayTasks, { id: uid(), text: text.trim(), done: false }] });
+      setText("");
+    };
+    const toggleTask = (id) => {
+      onChange({
+        ...weekPlan,
+        [activeDay]: dayTasks.map((t) => t.id === id ? { ...t, done: !t.done } : t)
+      });
+    };
+    const deleteTask = (id) => {
+      onChange({ ...weekPlan, [activeDay]: dayTasks.filter((t) => t.id !== id) });
+    };
+    const doneCount = dayTasks.filter((t) => t.done).length;
+    return /* @__PURE__ */ React.createElement("div", { className: "pb-10" }, /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text }, className: "text-2xl mb-1" }, "Planificador semanal"), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm mb-5" }, "Organiz\xE1 tus tareas de la semana, d\xEDa por d\xEDa."), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 overflow-x-auto pb-2 mb-4 -mx-1 px-1" }, DAYS.map((d) => /* @__PURE__ */ React.createElement(Chip, { key: d, active: activeDay === d, color: C.gold, onClick: () => setActiveDay(d), small: true }, d.slice(0, 3)))), dayTasks.length > 0 && /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_MONO, color: C.textFaint }, className: "text-xs mb-3" }, doneCount, "/", dayTasks.length, " tareas"), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-2 mb-4" }, dayTasks.length === 0 && /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm text-center py-4" }, "Nada cargado para ", activeDay.toLowerCase(), "."), dayTasks.map((t) => /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        key: t.id,
+        className: "flex items-center gap-3 rounded-xl px-3.5 py-3",
+        style: { background: C.card, border: `1px solid ${C.borderSoft}` }
+      },
+      /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          type: "button",
+          onClick: () => toggleTask(t.id),
+          className: "flex items-center justify-center rounded-full shrink-0",
+          style: {
+            width: 26,
+            height: 26,
+            border: `2px solid ${t.done ? C.gold : C.border}`,
+            background: t.done ? C.gold : "transparent"
+          }
+        },
+        t.done && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: C.onAccent, fontWeight: 900 } }, "\u2713")
+      ),
+      /* @__PURE__ */ React.createElement(
+        "span",
+        {
+          style: {
+            fontFamily: FONT_BODY,
+            color: t.done ? C.textFaint : C.text,
+            textDecoration: t.done ? "line-through" : "none"
+          },
+          className: "text-sm flex-1 truncate"
+        },
+        t.text
+      ),
+      /* @__PURE__ */ React.createElement("button", { type: "button", onClick: () => deleteTask(t.id), style: { color: C.textFaint } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 15, lineHeight: 1 } }, "\u2715"))
+    ))), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        value: text,
+        onChange: (e) => setText(e.target.value),
+        placeholder: "Nueva tarea",
+        onKeyDown: (e) => {
+          if (e.key === "Enter") addTask();
+        },
+        style: { fontFamily: FONT_BODY, background: C.card2, border: `1px solid ${C.border}`, color: C.text },
+        className: "flex-1 rounded-xl px-3.5 py-2.5 text-sm outline-none"
+      }
+    ), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        type: "button",
+        disabled: !text.trim(),
+        onClick: addTask,
+        style: {
+          fontFamily: FONT_BODY,
+          background: text.trim() ? C.gold : C.border,
+          color: text.trim() ? C.onAccent : C.textFaint
+        },
+        className: "rounded-xl px-4 py-2.5 text-sm font-semibold shrink-0"
+      },
+      "+"
+    )));
+  }
   function NutritionView({ nutrition, onChange }) {
     const [activeDay, setActiveDay] = useState(DAYS[weekdayIndex(/* @__PURE__ */ new Date())]);
     const updateMeal = (meal, value) => {
@@ -1323,6 +1858,11 @@
     const [wheel, setWheel] = useState({});
     const [agenda, setAgenda] = useState([]);
     const [finance, setFinance] = useState({ transactions: [], goal: { target: 0, current: 0 } });
+    const [exercises, setExercises] = useState([]);
+    const [workoutLogs, setWorkoutLogs] = useState({});
+    const [goals, setGoals] = useState([]);
+    const [notes, setNotes] = useState([]);
+    const [weekPlan, setWeekPlan] = useState({});
     const [tab, setTab] = useState("inicio");
     const [filter, setFilter] = useState("todas");
     const [sheet, setSheet] = useState(null);
@@ -1334,7 +1874,7 @@
     const [resetConfirm, setResetConfirm] = useState(false);
     useEffect(() => {
       (async () => {
-        const [p, h, l, n, ck, rt, wh, ag, fi] = await Promise.all([
+        const [p, h, l, n, ck, rt, wh, ag, fi, ex, wl, go, nt, wp] = await Promise.all([
           getItem("profile", null),
           getItem("habits", []),
           getItem("logs", {}),
@@ -1343,7 +1883,12 @@
           getItem("ritual", {}),
           getItem("wheel", {}),
           getItem("agenda", []),
-          getItem("finance", { transactions: [], goal: { target: 0, current: 0 } })
+          getItem("finance", { transactions: [], goal: { target: 0, current: 0 } }),
+          getItem("exercises", []),
+          getItem("workoutLogs", {}),
+          getItem("goals", []),
+          getItem("notes", []),
+          getItem("weekPlan", {})
         ]);
         setProfile(p);
         setHabits(h);
@@ -1354,6 +1899,11 @@
         setWheel(wh);
         setAgenda(ag);
         setFinance(fi);
+        setExercises(ex);
+        setWorkoutLogs(wl);
+        setGoals(go);
+        setNotes(nt);
+        setWeekPlan(wp);
         setLoading(false);
       })();
     }, []);
@@ -1404,6 +1954,29 @@
     const persistFinance = (next) => {
       setFinance(next);
       setItem("finance", next);
+    };
+    const persistExercises = (next) => {
+      setExercises(next);
+      setItem("exercises", next);
+    };
+    const persistGoals = (next) => {
+      setGoals(next);
+      setItem("goals", next);
+    };
+    const persistNotes = (next) => {
+      setNotes(next);
+      setItem("notes", next);
+    };
+    const persistWeekPlan = (next) => {
+      setWeekPlan(next);
+      setItem("weekPlan", next);
+    };
+    const toggleWorkout = (exerciseId) => {
+      const dayLogs = workoutLogs[todayKey] || {};
+      const nextDayLogs = { ...dayLogs, [exerciseId]: !dayLogs[exerciseId] };
+      const next = { ...workoutLogs, [todayKey]: nextDayLogs };
+      setWorkoutLogs(next);
+      setItem("workoutLogs", next);
     };
     const toggleHabitOnDate = (habitId, dateKey) => {
       const dayLogs = logs[dateKey] || {};
@@ -1557,13 +2130,17 @@
         style: { width: 108, background: C.bgSoft, borderRight: `1px solid ${C.border}` }
       },
       /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-6 pb-6" }, /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_MONO, color: C.gold }, className: "text-xs tracking-widest uppercase" }, "Rumbo")),
-      /* @__PURE__ */ React.createElement("nav", { className: "flex-1 flex flex-col gap-1 px-3" }, [
+      /* @__PURE__ */ React.createElement("nav", { className: "flex-1 flex flex-col gap-1 px-3 overflow-y-auto" }, [
         { id: "inicio", label: "Hoy" },
         { id: "panel", label: "Panel" },
         { id: "ritual", label: "Ritual" },
         { id: "rutina", label: "Rutina" },
+        { id: "entreno", label: "Entreno" },
+        { id: "metas", label: "Metas" },
         { id: "rueda", label: "Rueda" },
         { id: "finanzas", label: "Finanzas" },
+        { id: "notas", label: "Notas" },
+        { id: "semana", label: "Semana" },
         { id: "nutricion", label: "Nutrici\xF3n" }
       ].map((t) => /* @__PURE__ */ React.createElement(
         "button",
@@ -1577,7 +2154,7 @@
             color: tab === t.id ? C.gold : C.textMuted,
             borderLeft: `2px solid ${tab === t.id ? C.gold : "transparent"}`
           },
-          className: "text-left rounded-r-lg pl-3 pr-2 py-2.5 text-xs font-semibold transition-colors"
+          className: "text-left rounded-r-lg pl-3 pr-2 py-2 text-xs font-semibold transition-colors"
         },
         t.label
       ))),
@@ -1672,6 +2249,11 @@
               await setItem("wheel", {});
               await setItem("agenda", []);
               await setItem("finance", { transactions: [], goal: { target: 0, current: 0 } });
+              await setItem("exercises", []);
+              await setItem("workoutLogs", {});
+              await setItem("goals", []);
+              await setItem("notes", []);
+              await setItem("weekPlan", {});
               setProfile(null);
               setHabits([]);
               setLogs({});
@@ -1681,6 +2263,11 @@
               setWheel({});
               setAgenda([]);
               setFinance({ transactions: [], goal: { target: 0, current: 0 } });
+              setExercises([]);
+              setWorkoutLogs({});
+              setGoals([]);
+              setNotes([]);
+              setWeekPlan({});
               setSettingsOpen(false);
               setResetConfirm(false);
             },
@@ -1748,8 +2335,8 @@
         "Sin h\xE1bitos en ",
         block.label.toLowerCase(),
         " \xB7 agregar uno"
-      ) : /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-2" }, blockHabits.map((h) => /* @__PURE__ */ React.createElement(
-        HabitRow,
+      ) : /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-2" }, /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-3 gap-2.5" }, blockHabits.map((h) => /* @__PURE__ */ React.createElement(
+        HabitCard,
         {
           key: h.id,
           habit: h,
@@ -1759,7 +2346,7 @@
           onEdit: (hh) => setSheet({ mode: "edit", initial: hh }),
           onDelete: deleteHabit
         }
-      )), /* @__PURE__ */ React.createElement(
+      ))), /* @__PURE__ */ React.createElement(
         "button",
         {
           type: "button",
@@ -1810,7 +2397,16 @@
         onChange: persistRitual,
         onCompleteSapo: () => fireBurst(24)
       }
-    ), tab === "rutina" && /* @__PURE__ */ React.createElement(AgendaView, { agenda, onChange: persistAgenda }), tab === "rueda" && /* @__PURE__ */ React.createElement(WheelView, { wheel, onChange: persistWheel }), tab === "finanzas" && /* @__PURE__ */ React.createElement(FinanceView, { finance, onChange: persistFinance, monthKeyPrefix }), tab === "nutricion" && /* @__PURE__ */ React.createElement(NutritionView, { nutrition, onChange: persistNutrition })))), tab === "inicio" && /* @__PURE__ */ React.createElement(
+    ), tab === "rutina" && /* @__PURE__ */ React.createElement(AgendaView, { agenda, onChange: persistAgenda }), tab === "entreno" && /* @__PURE__ */ React.createElement(
+      WorkoutView,
+      {
+        exercises,
+        onChangeExercises: persistExercises,
+        workoutLogs,
+        todayKey,
+        onToggle: toggleWorkout
+      }
+    ), tab === "metas" && /* @__PURE__ */ React.createElement(GoalsView, { goals, onChange: persistGoals }), tab === "rueda" && /* @__PURE__ */ React.createElement(WheelView, { wheel, onChange: persistWheel }), tab === "finanzas" && /* @__PURE__ */ React.createElement(FinanceView, { finance, onChange: persistFinance, monthKeyPrefix }), tab === "notas" && /* @__PURE__ */ React.createElement(NotesView, { notes, onChange: persistNotes }), tab === "semana" && /* @__PURE__ */ React.createElement(WeekPlannerView, { weekPlan, onChange: persistWeekPlan }), tab === "nutricion" && /* @__PURE__ */ React.createElement(NutritionView, { nutrition, onChange: persistNutrition })))), tab === "inicio" && /* @__PURE__ */ React.createElement(
       "button",
       {
         type: "button",
