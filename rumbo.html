@@ -4,8 +4,6 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Rumbo</title>
-
-<!-- PWA: hace que se pueda instalar en el celular como una app -->
 <link rel="manifest" href="manifest.json" />
 <meta name="theme-color" content="#12141F" />
 <meta name="mobile-web-app-capable" content="yes" />
@@ -14,18 +12,11 @@
 <meta name="apple-mobile-web-app-title" content="Rumbo" />
 <link rel="icon" href="icon-192.png" />
 <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-
-<!-- Tailwind precompilado localmente (sin CDN, funciona sin internet) -->
 <link rel="stylesheet" href="tailwind.min.css" />
-
-<!-- Tipografías (si no hay internet, cae a las fuentes del sistema) -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
-
-<!-- React + ReactDOM alojados localmente (sin CDN, funciona sin internet) -->
 <script src="react.production.min.js"></script>
 <script src="react-dom.production.min.js"></script>
-
 <style>
   html, body { margin: 0; padding: 0; background: #12141F; }
   @keyframes confetti-fall {
@@ -35,8 +26,6 @@
   input::placeholder, textarea::placeholder { color: #5D6178; }
   * { -webkit-tap-highlight-color: transparent; }
 </style>
-
-<!-- Diagnóstico: si algo no carga, lo muestra en pantalla en vez de dejar todo en negro -->
 <script>
   function showBootError(msg) {
     var el = document.getElementById("root");
@@ -66,7 +55,6 @@
       }
     }, 2000);
   });
-  // Registra el service worker para que la app funcione instalada y sin conexión
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", function () {
       navigator.serviceWorker.register("service-worker.js").catch(function () {});
@@ -80,7 +68,6 @@
     Cargando Rumbo…
   </div>
 </div>
-
 <script>
 (() => {
   // rumbo_inner.js
@@ -1282,39 +1269,39 @@
     ))));
   }
   function WorkoutView({ exercises, onChangeExercises, workoutLogs, todayKey, onToggle }) {
+    const [activeDay, setActiveDay] = useState(DAYS[weekdayIndex(/* @__PURE__ */ new Date())]);
     const [name, setName] = useState("");
     const [sets, setSets] = useState("");
     const [reps, setReps] = useState("");
-    const [group, setGroup] = useState("");
     const [editingId, setEditingId] = useState(null);
     const [editName, setEditName] = useState("");
     const [editSets, setEditSets] = useState("");
     const [editReps, setEditReps] = useState("");
-    const [editGroup, setEditGroup] = useState("");
+    const [editDay, setEditDay] = useState(activeDay);
     const todayLogs = workoutLogs[todayKey] || {};
     const inputStyle = { fontFamily: FONT_BODY, background: C.card2, border: `1px solid ${C.border}`, color: C.text };
+    const dayExercises = exercises.filter((ex) => (ex.day || ex.group || "") === activeDay);
     const addExercise = () => {
       if (!name.trim()) return;
       onChangeExercises([
         ...exercises,
-        { id: uid(), name: name.trim(), sets: sets.trim(), reps: reps.trim(), group: group.trim() }
+        { id: uid(), name: name.trim(), sets: sets.trim(), reps: reps.trim(), day: activeDay }
       ]);
       setName("");
       setSets("");
       setReps("");
-      setGroup("");
     };
     const startEdit = (ex) => {
       setEditingId(ex.id);
       setEditName(ex.name);
       setEditSets(ex.sets || "");
       setEditReps(ex.reps || "");
-      setEditGroup(ex.group || "");
+      setEditDay(ex.day || ex.group || activeDay);
     };
     const saveEdit = () => {
       onChangeExercises(
         exercises.map(
-          (e) => e.id === editingId ? { ...e, name: editName.trim(), sets: editSets.trim(), reps: editReps.trim(), group: editGroup.trim() } : e
+          (e) => e.id === editingId ? { ...e, name: editName.trim(), sets: editSets.trim(), reps: editReps.trim(), day: editDay, group: void 0 } : e
         )
       );
       setEditingId(null);
@@ -1323,70 +1310,8 @@
       onChangeExercises(exercises.filter((e) => e.id !== id));
       if (editingId === id) setEditingId(null);
     };
-    const grouped = {};
-    exercises.forEach((ex) => {
-      const g = ex.group || "General";
-      if (!grouped[g]) grouped[g] = [];
-      grouped[g].push(ex);
-    });
-    return /* @__PURE__ */ React.createElement("div", { className: "pb-10" }, /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text }, className: "text-2xl mb-1" }, "Entrenamiento"), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm mb-5" }, "Tu rutina de ejercicios."), /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-4 mb-5", style: { background: C.card, border: `1px solid ${C.borderSoft}` } }, /* @__PURE__ */ React.createElement(
-      "input",
-      {
-        value: name,
-        onChange: (e) => setName(e.target.value),
-        placeholder: "Ejercicio",
-        style: inputStyle,
-        className: "w-full rounded-xl px-3.5 py-2.5 text-sm outline-none mb-2.5"
-      }
-    ), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mb-2.5" }, /* @__PURE__ */ React.createElement(
-      "input",
-      {
-        value: sets,
-        onChange: (e) => setSets(e.target.value),
-        placeholder: "Series",
-        style: inputStyle,
-        className: "flex-1 rounded-xl px-3.5 py-2.5 text-sm outline-none"
-      }
-    ), /* @__PURE__ */ React.createElement(
-      "input",
-      {
-        value: reps,
-        onChange: (e) => setReps(e.target.value),
-        placeholder: "Reps",
-        style: inputStyle,
-        className: "flex-1 rounded-xl px-3.5 py-2.5 text-sm outline-none"
-      }
-    ), /* @__PURE__ */ React.createElement(
-      "input",
-      {
-        value: group,
-        onChange: (e) => setGroup(e.target.value),
-        placeholder: "D\xEDa/grupo",
-        style: inputStyle,
-        className: "flex-1 rounded-xl px-3.5 py-2.5 text-sm outline-none"
-      }
-    )), /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        type: "button",
-        disabled: !name.trim(),
-        onClick: addExercise,
-        style: {
-          fontFamily: FONT_BODY,
-          background: name.trim() ? C.gold : C.border,
-          color: name.trim() ? C.onAccent : C.textFaint
-        },
-        className: "w-full rounded-xl py-2.5 text-sm font-semibold"
-      },
-      "Agregar"
-    )), exercises.length === 0 ? /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm text-center py-6" }, "Todav\xEDa no cargaste ejercicios.") : Object.keys(grouped).map((g) => /* @__PURE__ */ React.createElement("div", { key: g, className: "mb-6" }, /* @__PURE__ */ React.createElement(
-      "h2",
-      {
-        style: { fontFamily: FONT_BODY, color: C.textMuted },
-        className: "text-xs font-semibold uppercase tracking-wider mb-2.5"
-      },
-      g
-    ), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-2" }, grouped[g].map(
+    const doneCount = dayExercises.filter((ex) => todayLogs[ex.id]).length;
+    return /* @__PURE__ */ React.createElement("div", { className: "pb-10" }, /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text }, className: "text-2xl mb-1" }, "Entrenamiento"), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm mb-5" }, "Tu rutina de ejercicios, d\xEDa por d\xEDa."), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 overflow-x-auto pb-2 mb-4 -mx-1 px-1" }, DAYS.map((d) => /* @__PURE__ */ React.createElement(Chip, { key: d, active: activeDay === d, color: C.teal, onClick: () => setActiveDay(d), small: true }, d.slice(0, 3)))), dayExercises.length > 0 && /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_MONO, color: C.textFaint }, className: "text-xs mb-3" }, doneCount, "/", dayExercises.length, " hechos hoy"), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-2 mb-5" }, dayExercises.length === 0 && /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm text-center py-4" }, "Nada cargado para ", activeDay.toLowerCase(), "."), dayExercises.map(
       (ex) => editingId === ex.id ? /* @__PURE__ */ React.createElement(
         "div",
         {
@@ -1403,7 +1328,7 @@
             className: "w-full rounded-lg px-3 py-2 text-sm outline-none mb-2"
           }
         ),
-        /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mb-2" }, /* @__PURE__ */ React.createElement(
+        /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mb-2.5" }, /* @__PURE__ */ React.createElement(
           "input",
           {
             value: editSets,
@@ -1421,16 +1346,9 @@
             style: { ...inputStyle, background: C.card },
             className: "flex-1 rounded-lg px-3 py-2 text-sm outline-none"
           }
-        ), /* @__PURE__ */ React.createElement(
-          "input",
-          {
-            value: editGroup,
-            onChange: (e) => setEditGroup(e.target.value),
-            placeholder: "D\xEDa/grupo",
-            style: { ...inputStyle, background: C.card },
-            className: "flex-1 rounded-lg px-3 py-2 text-sm outline-none"
-          }
         )),
+        /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-xs mb-1.5" }, "D\xEDa"),
+        /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-1.5 mb-3" }, DAYS.map((d) => /* @__PURE__ */ React.createElement(Chip, { key: d, active: editDay === d, color: C.teal, onClick: () => setEditDay(d), small: true }, d.slice(0, 3)))),
         /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, /* @__PURE__ */ React.createElement(
           "button",
           {
@@ -1493,7 +1411,56 @@
           "Editar"
         )
       )
-    )))));
+    )), /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-4", style: { background: C.card, border: `1px solid ${C.borderSoft}` } }, /* @__PURE__ */ React.createElement(
+      "p",
+      {
+        style: { fontFamily: FONT_BODY, color: C.textMuted },
+        className: "text-xs font-semibold uppercase tracking-wider mb-3"
+      },
+      "Agregar a ",
+      activeDay.toLowerCase()
+    ), /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        value: name,
+        onChange: (e) => setName(e.target.value),
+        placeholder: "Ejercicio",
+        style: inputStyle,
+        className: "w-full rounded-xl px-3.5 py-2.5 text-sm outline-none mb-2.5"
+      }
+    ), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mb-2.5" }, /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        value: sets,
+        onChange: (e) => setSets(e.target.value),
+        placeholder: "Series",
+        style: inputStyle,
+        className: "flex-1 rounded-xl px-3.5 py-2.5 text-sm outline-none"
+      }
+    ), /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        value: reps,
+        onChange: (e) => setReps(e.target.value),
+        placeholder: "Reps",
+        style: inputStyle,
+        className: "flex-1 rounded-xl px-3.5 py-2.5 text-sm outline-none"
+      }
+    )), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        type: "button",
+        disabled: !name.trim(),
+        onClick: addExercise,
+        style: {
+          fontFamily: FONT_BODY,
+          background: name.trim() ? C.gold : C.border,
+          color: name.trim() ? C.onAccent : C.textFaint
+        },
+        className: "w-full rounded-xl py-2.5 text-sm font-semibold"
+      },
+      "Agregar"
+    )));
   }
   function GoalsView({ goals, onChange }) {
     const [title, setTitle] = useState("");
