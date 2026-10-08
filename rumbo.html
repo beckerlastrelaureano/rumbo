@@ -1319,7 +1319,47 @@
     }
     return null;
   })();
-  function BeckerCard({ todayKey }) {
+  // Estado de la cuenta (lo publica el módulo de sincronización al final del archivo).
+  function useSync() {
+    const [s, setS] = useState(() => window.rumboSync ? window.rumboSync.estado() : { disponible: false, user: null, estado: "apagado", error: "", hayCambios: false });
+    useEffect(() => {
+      const f = (e) => setS(e.detail);
+      window.addEventListener("rumbo-sync", f);
+      if (window.rumboSync) setS(window.rumboSync.estado());
+      return () => window.removeEventListener("rumbo-sync", f);
+    }, []);
+    return s;
+  }
+  function readBeckerCloud() {
+    try {
+      return JSON.parse(localStorage.getItem("rumbo.beckerCloud"));
+    } catch (e) {
+      return null;
+    }
+  }
+  // Con la cuenta iniciada: lo que planeaste y lo que entrenaste en Becker App el día elegido.
+  function BeckerCard({ todayKey, activeDay }) {
+    const [cloud, setCloud] = useState(readBeckerCloud);
+    useEffect(() => {
+      const f = () => setCloud(readBeckerCloud());
+      window.addEventListener("rumbo-becker", f);
+      return () => window.removeEventListener("rumbo-becker", f);
+    }, []);
+    if (!cloud) return /* @__PURE__ */ React.createElement(BeckerCardLocal, { todayKey });
+    const idx = DAYS.indexOf(activeDay);
+    const hoy = /* @__PURE__ */ new Date();
+    const d = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - weekdayIndex(hoy) + idx);
+    if (d > hoy) d.setDate(d.getDate() - 7);
+    const key = fmtDate(d);
+    const hechos = cloud.sesiones.filter((s) => s.fecha === key);
+    const plan = cloud.plan.filter((u) => u.dia === idx);
+    const desde = fmtDate(new Date(Date.now() - 6 * 864e5));
+    const semana = cloud.sesiones.filter((s) => s.fecha >= desde && s.fecha <= todayKey).length;
+    const txt = (color, extra) => ({ style: { fontFamily: FONT_BODY, color }, className: extra });
+    return /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-4 mb-5", style: { background: C.card, border: `1px solid ${C.borderSoft}` } }, /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_MONO, color: C.gold }, className: "text-xs uppercase tracking-widest mb-2" }, "Becker App \xB7 ", activeDay, " ", d.getDate(), "/", d.getMonth() + 1), hechos.length ? hechos.map((s, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "mb-3" }, /* @__PURE__ */ React.createElement("p", txt(C.sage, "text-sm font-semibold mb-1"), "✓ ", s.nombre, /* @__PURE__ */ React.createElement("span", { style: { color: C.textMuted, fontWeight: 400 } }, " \xB7 ", s.minutos, " min \xB7 ", s.series, " series", s.volumen ? ` \xB7 ${s.volumen.toLocaleString("es")} kg` : "")), s.ejercicios.map((e, j) => /* @__PURE__ */ React.createElement("div", { key: j, className: "mb-1.5" }, /* @__PURE__ */ React.createElement("p", txt(C.text, "text-xs font-semibold"), e.nombre), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_MONO, color: C.textMuted }, className: "text-xs" }, e.series))))) : /* @__PURE__ */ React.createElement("p", txt(C.textMuted, "text-sm mb-2"), d.getTime() === new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()).getTime() ? "Hoy todav\xEDa no entrenaste en Becker App." : `El ${activeDay.toLowerCase()} ${d.getDate()}/${d.getMonth() + 1} no entrenaste en Becker App.`), plan.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "rounded-xl p-3 mb-3", style: { background: C.card2 } }, /* @__PURE__ */ React.createElement("p", txt(C.textFaint, "text-xs uppercase tracking-wider mb-1.5"), "Plan para los ", activeDay.toLowerCase()), plan.map((u, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "mb-1.5" }, /* @__PURE__ */ React.createElement("p", txt(C.text, "text-xs font-semibold"), u.nombre), /* @__PURE__ */ React.createElement("p", txt(C.textMuted, "text-xs"), u.ejercicios.map((e) => `${e.nombre} (${e.detalle})`).join(" \xB7 "))))), /* @__PURE__ */ React.createElement("p", txt(C.textFaint, "text-xs mb-3"), semana, " ", semana === 1 ? "entrenamiento" : "entrenamientos", " en los \xFAltimos 7 d\xEDas"), /* @__PURE__ */ React.createElement("a", { href: BECKER_URL, target: "_blank", rel: "noopener", style: { fontFamily: FONT_BODY, background: C.gold, color: C.onAccent }, className: "block rounded-xl py-2.5 text-xs font-semibold text-center" }, "Entrenar en Becker App"));
+  }
+  // Sin cuenta: resumen que llega por link o pegado desde Becker App.
+  function BeckerCardLocal({ todayKey }) {
     const [list, setList] = useState(readBecker);
     const [msg, setMsg] = useState(BECKER_INCOMING ? `Anotado desde Becker App: ${BECKER_INCOMING.nombre}` : "");
     const hoy = list.filter((x) => x.fecha === todayKey);
@@ -1341,7 +1381,47 @@
       setMsg(`Anotado: ${e.nombre}`);
     };
     const btn = "flex-1 rounded-xl py-2.5 text-xs font-semibold text-center";
-    return /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-4 mb-5", style: { background: C.card, border: `1px solid ${C.borderSoft}` } }, /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_MONO, color: C.gold }, className: "text-xs uppercase tracking-widest mb-2" }, "Becker App"), hoy.length ? hoy.map((x) => /* @__PURE__ */ React.createElement("p", { key: x.nombre, style: { fontFamily: FONT_BODY, color: C.sage }, className: "text-sm font-semibold mb-1" }, "✓ Hoy entrenaste: ", x.nombre, /* @__PURE__ */ React.createElement("span", { style: { color: C.textMuted, fontWeight: 400 } }, " \xB7 ", x.minutos, " min \xB7 ", x.series, " series", x.volumen ? ` \xB7 ${x.volumen.toLocaleString("es")} kg` : ""))) : /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textMuted }, className: "text-sm mb-1" }, "Todav\xEDa no anotaste el entreno de hoy."), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-xs mb-3" }, semana, " ", semana === 1 ? "entrenamiento" : "entrenamientos", " en los \xFAltimos 7 d\xEDas"), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, /* @__PURE__ */ React.createElement("a", { href: BECKER_URL, target: "_blank", rel: "noopener", style: { fontFamily: FONT_BODY, background: C.gold, color: C.onAccent }, className: btn }, "Entrenar en Becker App"), /* @__PURE__ */ React.createElement("button", { type: "button", onClick: pegar, style: { fontFamily: FONT_BODY, background: C.card2, color: C.text, border: `1px solid ${C.border}` }, className: btn }, "Pegar desde Becker App")), msg && /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textMuted }, className: "text-xs mt-2.5" }, msg));
+    return /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-4 mb-5", style: { background: C.card, border: `1px solid ${C.borderSoft}` } }, /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_MONO, color: C.gold }, className: "text-xs uppercase tracking-widest mb-2" }, "Becker App"), hoy.length ? hoy.map((x) => /* @__PURE__ */ React.createElement("p", { key: x.nombre, style: { fontFamily: FONT_BODY, color: C.sage }, className: "text-sm font-semibold mb-1" }, "✓ Hoy entrenaste: ", x.nombre, /* @__PURE__ */ React.createElement("span", { style: { color: C.textMuted, fontWeight: 400 } }, " \xB7 ", x.minutos, " min \xB7 ", x.series, " series", x.volumen ? ` \xB7 ${x.volumen.toLocaleString("es")} kg` : ""))) : /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textMuted }, className: "text-sm mb-1" }, "Todav\xEDa no anotaste el entreno de hoy."), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-xs mb-3" }, semana, " ", semana === 1 ? "entrenamiento" : "entrenamientos", " en los \xFAltimos 7 d\xEDas"), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, /* @__PURE__ */ React.createElement("a", { href: BECKER_URL, target: "_blank", rel: "noopener", style: { fontFamily: FONT_BODY, background: C.gold, color: C.onAccent }, className: btn }, "Entrenar en Becker App"), /* @__PURE__ */ React.createElement("button", { type: "button", onClick: pegar, style: { fontFamily: FONT_BODY, background: C.card2, color: C.text, border: `1px solid ${C.border}` }, className: btn }, "Pegar desde Becker App")), msg && /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textMuted }, className: "text-xs mt-2.5" }, msg), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-xs mt-2.5" }, "Para ver ac\xE1 tus entrenamientos y rutinas de Becker App, entr\xE1 en Cuenta (men\xFA) con la misma cuenta que en Becker App."));
+  }
+  // ---- Cuenta: la misma de Becker App, para guardar todo en la nube ----
+  function CuentaView() {
+    const s = useSync();
+    const [email, setEmail] = useState("");
+    const [pass, setPass] = useState("");
+    const [ocupado, setOcupado] = useState(false);
+    const [aviso, setAviso] = useState("");
+    const inputStyle = { fontFamily: FONT_BODY, background: C.card2, border: `1px solid ${C.border}`, color: C.text };
+    const enviar = async (crear) => {
+      if (!window.rumboSync || ocupado) return;
+      setOcupado(true);
+      setAviso("");
+      const ok = await window.rumboSync.entrar(email, pass, crear);
+      setOcupado(false);
+      if (ok) setPass("");
+    };
+    const recuperar = async () => {
+      if (!email.includes("@")) {
+        setAviso("Escrib\xED tu email primero.");
+        return;
+      }
+      if (await window.rumboSync.recuperar(email)) setAviso("Te mandamos un email para cambiar la contrase\xF1a.");
+    };
+    const card = { className: "rounded-2xl p-4 mb-4", style: { background: C.card, border: `1px solid ${C.borderSoft}` } };
+    const p = (color, cls, ...kids) => React.createElement("p", { style: { fontFamily: FONT_BODY, color }, className: cls }, ...kids);
+    const btn = (bg, color, onClick, label, extra = "") => React.createElement("button", { type: "button", onClick, disabled: ocupado, style: { fontFamily: FONT_BODY, background: bg, color, border: `1px solid ${C.border}`, opacity: ocupado ? 0.6 : 1 }, className: `flex-1 rounded-xl py-2.5 text-sm font-semibold ${extra}` }, label);
+    let cuerpo;
+    if (!s.disponible) cuerpo = React.createElement("div", card, p(C.textMuted, "text-sm", "La sincronizaci\xF3n todav\xEDa no est\xE1 activada en esta versi\xF3n."));
+    else if (s.user) {
+      const est = { conectando: "Sincronizando…", ok: `Sincronizado${s.ultima ? ` a las ${new Date(s.ultima).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}` : ""}`, error: "Sin sincronizar", apagado: "" }[s.estado];
+      cuerpo = React.createElement("div", card, p(C.text, "text-sm mb-1", "Conectado como ", React.createElement("b", null, s.user.email)), p(s.estado === "ok" ? C.sage : C.textMuted, "text-xs mb-3", est), s.error && p(C.danger, "text-xs mb-3", s.error), p(C.textFaint, "text-xs mb-4", "Tus h\xE1bitos, ritual, metas, finanzas y notas se guardan en la nube. En Entreno ves lo que planeaste y entrenaste en Becker App."), React.createElement("div", { className: "flex" }, btn(C.card2, C.text, () => window.rumboSync.salir(), "Cerrar sesi\xF3n")));
+    } else cuerpo = React.createElement("div", card, p(C.textMuted, "text-sm mb-4", "Entr\xE1 con la misma cuenta que usaste en Becker App. Tus datos de este celular se suben y se unen con los de la nube."), React.createElement("input", { type: "email", value: email, onChange: (e) => setEmail(e.target.value), placeholder: "Email", autoComplete: "username", style: inputStyle, className: "w-full rounded-xl px-3 py-2.5 text-sm outline-none mb-2" }), React.createElement("input", { type: "password", value: pass, onChange: (e) => setPass(e.target.value), placeholder: "Contrase\xF1a (m\xEDnimo 6)", autoComplete: "current-password", onKeyDown: (e) => e.key === "Enter" && enviar(false), style: inputStyle, className: "w-full rounded-xl px-3 py-2.5 text-sm outline-none mb-3" }), s.error && p(C.danger, "text-xs mb-3", s.error), aviso && p(C.textMuted, "text-xs mb-3", aviso), React.createElement("div", { className: "flex gap-2 mb-3" }, btn(C.card2, C.text, () => enviar(true), "Crear cuenta"), btn(C.gold, C.onAccent, () => enviar(false), "Entrar")), React.createElement("button", { type: "button", onClick: recuperar, style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-xs w-full text-center" }, "Me olvid\xE9 la contrase\xF1a"));
+    return React.createElement("div", { className: "pb-10" }, React.createElement("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text }, className: "text-2xl mb-1" }, "Cuenta"), p(C.textFaint, "text-sm mb-5", "Guard\xE1 Rumbo en la nube y compartilo con Becker App."), cuerpo);
+  }
+  // Aviso cuando llegaron datos de otro dispositivo mientras la app estaba abierta.
+  function SyncBanner() {
+    const s = useSync();
+    if (!s.hayCambios) return null;
+    return React.createElement("button", { type: "button", onClick: () => window.rumboSync.recargar(), style: { fontFamily: FONT_BODY, background: withAlpha(C.gold, 0.16), color: C.gold, border: `1px solid ${C.gold}` }, className: "w-full rounded-xl py-2.5 text-xs font-semibold mb-4" }, "Hay datos nuevos de otro dispositivo \xB7 Tocar para actualizar");
   }
   // ---- Avisos: recordatorios que se guardan en el calendario del celular ----
   // Las apps web no pueden avisar con la app cerrada sin un servidor; el calendario sí suena siempre.
@@ -1473,7 +1553,7 @@
       if (editingId === id) setEditingId(null);
     };
     const doneCount = dayExercises.filter((ex) => todayLogs[ex.id]).length;
-    return /* @__PURE__ */ React.createElement("div", { className: "pb-10" }, /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text }, className: "text-2xl mb-1" }, "Entrenamiento"), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm mb-5" }, "Tu rutina de ejercicios, d\xEDa por d\xEDa."), /* @__PURE__ */ React.createElement(BeckerCard, { todayKey }), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 overflow-x-auto pb-2 mb-4 -mx-1 px-1" }, DAYS.map((d) => /* @__PURE__ */ React.createElement(Chip, { key: d, active: activeDay === d, color: C.teal, onClick: () => setActiveDay(d), small: true }, d.slice(0, 3)))), dayExercises.length > 0 && /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_MONO, color: C.textFaint }, className: "text-xs mb-3" }, doneCount, "/", dayExercises.length, " hechos hoy"), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-2 mb-5" }, dayExercises.length === 0 && /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm text-center py-4" }, "Nada cargado para ", activeDay.toLowerCase(), "."), dayExercises.map(
+    return /* @__PURE__ */ React.createElement("div", { className: "pb-10" }, /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text }, className: "text-2xl mb-1" }, "Entrenamiento"), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm mb-5" }, "Tu rutina de ejercicios, d\xEDa por d\xEDa."), /* @__PURE__ */ React.createElement(BeckerCard, { todayKey, activeDay }), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 overflow-x-auto pb-2 mb-4 -mx-1 px-1" }, DAYS.map((d) => /* @__PURE__ */ React.createElement(Chip, { key: d, active: activeDay === d, color: C.teal, onClick: () => setActiveDay(d), small: true }, d.slice(0, 3)))), dayExercises.length > 0 && /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_MONO, color: C.textFaint }, className: "text-xs mb-3" }, doneCount, "/", dayExercises.length, " hechos hoy"), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-2 mb-5" }, dayExercises.length === 0 && /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm text-center py-4" }, "Nada cargado para ", activeDay.toLowerCase(), "."), dayExercises.map(
       (ex) => editingId === ex.id ? /* @__PURE__ */ React.createElement(
         "div",
         {
@@ -2290,7 +2370,8 @@
         { id: "notas", label: "Notas" },
         { id: "semana", label: "Semana" },
         { id: "nutricion", label: "Nutrici\xF3n" },
-        { id: "avisos", label: "Avisos" }
+        { id: "avisos", label: "Avisos" },
+        { id: "cuenta", label: "Cuenta" }
       ].map((t) => /* @__PURE__ */ React.createElement(
         "button",
         {
@@ -2438,7 +2519,7 @@
           "Cancelar"
         )))
       )))
-    ), /* @__PURE__ */ React.createElement("main", { className: "flex-1 min-w-0 px-5 sm:px-8 pt-6 pb-24 overflow-y-auto" }, /* @__PURE__ */ React.createElement("div", { className: "max-w-lg" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 mb-5" }, /* @__PURE__ */ React.createElement(
+    ), /* @__PURE__ */ React.createElement("main", { className: "flex-1 min-w-0 px-5 sm:px-8 pt-6 pb-24 overflow-y-auto" }, /* @__PURE__ */ React.createElement("div", { className: "max-w-lg" }, /* @__PURE__ */ React.createElement(SyncBanner, null), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 mb-5" }, /* @__PURE__ */ React.createElement(
       "button",
       {
         type: "button",
@@ -2568,7 +2649,7 @@
         todayKey,
         onToggle: toggleWorkout
       }
-    ), tab === "metas" && /* @__PURE__ */ React.createElement(GoalsView, { goals, onChange: persistGoals }), tab === "rueda" && /* @__PURE__ */ React.createElement(WheelView, { wheel, onChange: persistWheel }), tab === "finanzas" && /* @__PURE__ */ React.createElement(FinanceView, { finance, onChange: persistFinance, monthKeyPrefix }), tab === "notas" && /* @__PURE__ */ React.createElement(NotesView, { notes, onChange: persistNotes }), tab === "semana" && /* @__PURE__ */ React.createElement(WeekPlannerView, { weekPlan, onChange: persistWeekPlan }), tab === "nutricion" && /* @__PURE__ */ React.createElement(NutritionView, { nutrition, onChange: persistNutrition }), tab === "avisos" && /* @__PURE__ */ React.createElement(RemindersView, null)))), tab === "inicio" && /* @__PURE__ */ React.createElement(
+    ), tab === "metas" && /* @__PURE__ */ React.createElement(GoalsView, { goals, onChange: persistGoals }), tab === "rueda" && /* @__PURE__ */ React.createElement(WheelView, { wheel, onChange: persistWheel }), tab === "finanzas" && /* @__PURE__ */ React.createElement(FinanceView, { finance, onChange: persistFinance, monthKeyPrefix }), tab === "notas" && /* @__PURE__ */ React.createElement(NotesView, { notes, onChange: persistNotes }), tab === "semana" && /* @__PURE__ */ React.createElement(WeekPlannerView, { weekPlan, onChange: persistWeekPlan }), tab === "nutricion" && /* @__PURE__ */ React.createElement(NutritionView, { nutrition, onChange: persistNutrition }), tab === "avisos" && /* @__PURE__ */ React.createElement(RemindersView, null), tab === "cuenta" && /* @__PURE__ */ React.createElement(CuentaView, null)))), tab === "inicio" && /* @__PURE__ */ React.createElement(
       "button",
       {
         type: "button",
@@ -2591,6 +2672,198 @@
   var rootEl = document.getElementById("root");
   ReactDOM.createRoot(rootEl).render(/* @__PURE__ */ React.createElement(App, null));
 })();
+</script>
+<script type="module">
+// Sincronización con la nube (Firebase), con la misma cuenta que Becker App.
+// Los datos siguen en el celular (localStorage); con la cuenta iniciada se copian a
+// usuarios/{uid}/rumbo/{clave} y se leen los entrenamientos de usuarios/{uid}/becker…
+// Cada clave se compara con la última versión sincronizada ("base"): si cambió un solo lado,
+// gana ese lado; si cambiaron los dos, se unen (listas por id y objetos por clave).
+const CONFIG = null; // Configuración pública de la app web en Firebase (la misma que Becker App).
+const V = "11.10.0";
+const KEYS = ["profile", "habits", "logs", "nutrition", "checkins", "ritual", "wheel", "agenda", "finance", "exercises", "workoutLogs", "goals", "notes", "weekPlan", "rumbo.avisos", "rumbo.becker"];
+const estado = { disponible: !!CONFIG, user: null, estado: "apagado", error: "", ultima: 0, hayCambios: false };
+const emitir = () => window.dispatchEvent(new CustomEvent("rumbo-sync", { detail: { ...estado } }));
+let fb = null, refs = null, remotos = {}, unsub = [], timer = null, aplicando = false;
+const arranque = Date.now();
+
+const ls = {
+  get: (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set: (k, v) => { try { aplicando = true; v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} finally { aplicando = false; } },
+};
+const baseKey = () => `rumbo.sync.base.${estado.user.uid}`;
+const getBase = () => { try { return JSON.parse(ls.get(baseKey())) || {}; } catch (e) { return {}; } };
+const setBase = (b) => ls.set(baseKey(), JSON.stringify(b));
+
+function unir(a, b) {
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (!a.concat(b).every((x) => x && typeof x === "object" && "id" in x)) return a;
+    const m = new Map(b.map((x) => [x.id, x]));
+    a.forEach((x) => m.set(x.id, x));
+    return [...m.values()];
+  }
+  if (a && b && typeof a === "object" && typeof b === "object" && !Array.isArray(a) && !Array.isArray(b)) {
+    const out = { ...b };
+    for (const k of Object.keys(a)) out[k] = k in b ? unir(a[k], b[k]) : a[k];
+    return out;
+  }
+  return a;
+}
+function resolver(k, L, R, base) {
+  if (R == null) return L;
+  if (L == null) return R;
+  if (base[k] != null && L === base[k]) return R;
+  if (base[k] != null && R === base[k]) return L;
+  try { return JSON.stringify(unir(JSON.parse(L), JSON.parse(R))); } catch (e) { return L; }
+}
+
+async function firebase() {
+  if (fb) return fb;
+  const [app, auth, fs] = await Promise.all([
+    import(`https://www.gstatic.com/firebasejs/${V}/firebase-app.js`),
+    import(`https://www.gstatic.com/firebasejs/${V}/firebase-auth.js`),
+    import(`https://www.gstatic.com/firebasejs/${V}/firebase-firestore.js`),
+  ]);
+  const a = app.initializeApp(CONFIG);
+  fb = { auth: auth.getAuth(a), A: auth, store: fs.getFirestore(a), fs };
+  return fb;
+}
+function mensaje(err) {
+  const c = (err && err.code) || "";
+  if (/invalid-credential|wrong-password|user-not-found/.test(c)) return "Email o contraseña incorrectos.";
+  if (c.includes("email-already-in-use")) return "Ya hay una cuenta con ese email: usá Entrar.";
+  if (c.includes("weak-password")) return "La contraseña tiene que tener al menos 6 caracteres.";
+  if (c.includes("invalid-email")) return "El email no es válido.";
+  if (/network|unavailable/.test(c)) return "Sin conexión. Se sincroniza cuando vuelva internet.";
+  if (c.includes("permission")) return "La nube rechazó el acceso (permisos).";
+  if (c.includes("too-many-requests")) return "Demasiados intentos. Esperá un rato.";
+  return "No se pudo sincronizar. Probá de nuevo.";
+}
+const set = (p) => { Object.assign(estado, p); emitir(); };
+
+// Aplica lo que vino de la nube. Rumbo lee sus datos al abrir, así que si algo cambió hay que
+// recargar: al abrir se recarga solo; después se ofrece un botón para no cortar lo que se está haciendo.
+function aplicarRemotos() {
+  const base = getBase();
+  let cambio = false;
+  for (const k of KEYS) {
+    const L = ls.get(k), R = remotos[k] ?? null;
+    const v = resolver(k, L, R, base);
+    if (v !== L) { ls.set(k, v); cambio = true; }
+    if (R != null && v === R) base[k] = R;
+  }
+  setBase(base);
+  if (cambio) {
+    if (Date.now() - arranque < 8000) location.reload();
+    else set({ hayCambios: true });
+  }
+  programar();
+}
+async function subir() {
+  if (!refs) return;
+  const { fs } = fb;
+  const base = getBase();
+  try {
+    for (const k of KEYS) {
+      const v = ls.get(k);
+      if (v == null || v === remotos[k]) continue;
+      await fs.setDoc(fs.doc(refs.rumbo, k), { value: v, updatedAt: Date.now() });
+      remotos[k] = v; base[k] = v;
+    }
+    setBase(base);
+    set({ estado: "ok", ultima: Date.now(), error: "" });
+  } catch (err) { set({ estado: "error", error: mensaje(err) }); }
+}
+function programar() { if (refs) { clearTimeout(timer); timer = setTimeout(subir, 1500); } }
+
+// Entrenamientos y rutinas de Becker App, para la tarjeta de Entreno.
+const BECKER_CLOUD = "rumbo.beckerCloud";
+const fecha = (t) => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+let beckerEstado = null, beckerSes = new Map();
+function guardarBecker() {
+  const DIAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+  const nombres = beckerEstado ? beckerEstado.nombres || {} : {};
+  let plan = [];
+  try {
+    const e = beckerEstado ? JSON.parse(beckerEstado.json) : null;
+    const items = (its) => its.map((it) => ({ nombre: nombres[it.exId] || "Ejercicio", detalle: `${it.sets} × ${it.reps}${it.kg != null ? ` · ${Math.round(it.kg * 10) / 10} kg` : ""}` }));
+    plan = (e ? e.rutinas : []).flatMap((r) => (r.dias
+      ? r.dias.map((d) => ({ nombre: `${r.nombre} · ${d.nombre}`, dia: d.dia, ejercicios: items(d.items) }))
+      : [{ nombre: r.nombre, dia: r.dia, ejercicios: items(r.items) }])).filter((u) => u.dia != null && u.ejercicios.length);
+  } catch (e) {}
+  const sesiones = [...beckerSes.values()].sort((a, b) => b.fin - a.fin).slice(0, 60).map((s) => {
+    const n = { ...nombres, ...(s.nombres || {}) };
+    const done = s.ejercicios.flatMap((e) => e.series);
+    return {
+      fecha: fecha(s.fin), nombre: s.nombre, minutos: Math.max(1, Math.round((s.fin - s.inicio) / 6e4)), series: done.length,
+      volumen: Math.round(done.reduce((a, x) => a + (x.kg && x.reps ? x.kg * x.reps : 0), 0)),
+      ejercicios: s.ejercicios.map((e) => ({ nombre: n[e.exId] || "Ejercicio", series: e.series.map((x) => `${x.kg ? Math.round(x.kg * 10) / 10 : "—"}×${x.reps}${x.rir != null ? ` RIR${x.rir}` : ""}${x.rpe != null ? ` @${x.rpe}` : ""}`).join(" · ") })),
+    };
+  });
+  ls.set(BECKER_CLOUD, JSON.stringify({ plan, sesiones, dias: DIAS, actualizado: Date.now() }));
+  window.dispatchEvent(new Event("rumbo-becker"));
+}
+
+async function empezar(user) {
+  const { store, fs } = await firebase();
+  set({ user: { uid: user.uid, email: user.email }, estado: "conectando", error: "" });
+  refs = { rumbo: fs.collection(store, "usuarios", user.uid, "rumbo") };
+  const becker = { estado: fs.doc(store, "usuarios", user.uid, "becker", "estado"), sesiones: fs.query(fs.collection(store, "usuarios", user.uid, "becker_sesiones"), fs.orderBy("fin", "desc"), fs.limit(60)) };
+  try {
+    const snap = await fs.getDocs(refs.rumbo);
+    remotos = {};
+    snap.forEach((d) => { remotos[d.id] = d.data().value; });
+    aplicarRemotos();
+    await subir();
+  } catch (err) { set({ estado: "error", error: mensaje(err) }); }
+  unsub.push(fs.onSnapshot(refs.rumbo, (snap) => {
+    if (snap.metadata.hasPendingWrites) return;
+    let cambio = false;
+    snap.docChanges().forEach((c) => {
+      const v = c.type === "removed" ? undefined : c.doc.data().value;
+      if (remotos[c.doc.id] !== v) { remotos[c.doc.id] = v; cambio = true; }
+    });
+    if (cambio) aplicarRemotos();
+  }, (err) => set({ estado: "error", error: mensaje(err) })));
+  unsub.push(fs.onSnapshot(becker.estado, (s) => { beckerEstado = s.exists() ? s.data() : null; guardarBecker(); }, () => {}));
+  unsub.push(fs.onSnapshot(becker.sesiones, (s) => {
+    beckerSes = new Map();
+    s.forEach((d) => { try { beckerSes.set(d.id, { ...JSON.parse(d.data().json), nombres: d.data().nombres }); } catch (e) {} });
+    guardarBecker();
+  }, () => {}));
+}
+
+// Cada vez que Rumbo guarda algo de la lista, se sube a la nube (con una pequeña espera).
+const setOriginal = Storage.prototype.setItem;
+Storage.prototype.setItem = function (k, v) {
+  setOriginal.call(this, k, v);
+  if (!aplicando && this === localStorage && KEYS.includes(k)) programar();
+};
+
+window.rumboSync = {
+  estado: () => ({ ...estado }),
+  async entrar(email, pass, crear) {
+    const { auth, A } = await firebase();
+    set({ error: "" });
+    try { await (crear ? A.createUserWithEmailAndPassword : A.signInWithEmailAndPassword)(auth, email.trim(), pass); return true; }
+    catch (err) { set({ error: mensaje(err) }); return false; }
+  },
+  async salir() { const { auth, A } = await firebase(); await A.signOut(auth); },
+  async recuperar(email) {
+    const { auth, A } = await firebase();
+    try { await A.sendPasswordResetEmail(auth, email.trim()); return true; } catch (err) { set({ error: mensaje(err) }); return false; }
+  },
+  recargar: () => location.reload(),
+};
+if (CONFIG) {
+  firebase().then(({ auth, A }) => A.onAuthStateChanged(auth, (user) => {
+    unsub.forEach((u) => u()); unsub = []; refs = null; remotos = {};
+    if (user) empezar(user);
+    else { ls.set(BECKER_CLOUD, null); window.dispatchEvent(new Event("rumbo-becker")); set({ user: null, estado: "apagado", error: "" }); }
+  })).catch(() => set({ estado: "error", error: "No se pudo cargar la nube (¿sin internet?)." }));
+  window.addEventListener("online", programar);
+}
+emitir();
 </script>
 </body>
 </html>
