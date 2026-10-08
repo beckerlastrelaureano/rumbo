@@ -2679,8 +2679,16 @@
 // usuarios/{uid}/rumbo/{clave} y se leen los entrenamientos de usuarios/{uid}/becker…
 // Cada clave se compara con la última versión sincronizada ("base"): si cambió un solo lado,
 // gana ese lado; si cambiaron los dos, se unen (listas por id y objetos por clave).
-const CONFIG = null; // Configuración pública de la app web en Firebase (la misma que Becker App).
-const V = "11.10.0";
+// Configuración pública de la app web en Firebase (proyecto "becker-sync", la misma que Becker App).
+// No es secreta: la seguridad la dan el inicio de sesión y las reglas de Firestore.
+const CONFIG = {
+  apiKey: "AIzaSyD9CG3aFhpSl_waa1GyqUvoDYtG7k7yG7o",
+  authDomain: "becker-sync.firebaseapp.com",
+  projectId: "becker-sync",
+  storageBucket: "becker-sync.firebasestorage.app",
+  messagingSenderId: "277639910408",
+  appId: "1:277639910408:web:a84fbd7556582d9b4aedbd",
+};
 const KEYS = ["profile", "habits", "logs", "nutrition", "checkins", "ritual", "wheel", "agenda", "finance", "exercises", "workoutLogs", "goals", "notes", "weekPlan", "rumbo.avisos", "rumbo.becker"];
 const estado = { disponible: !!CONFIG, user: null, estado: "apagado", error: "", ultima: 0, hayCambios: false };
 const emitir = () => window.dispatchEvent(new CustomEvent("rumbo-sync", { detail: { ...estado } }));
@@ -2720,9 +2728,9 @@ function resolver(k, L, R, base) {
 async function firebase() {
   if (fb) return fb;
   const [app, auth, fs] = await Promise.all([
-    import(`https://www.gstatic.com/firebasejs/${V}/firebase-app.js`),
-    import(`https://www.gstatic.com/firebasejs/${V}/firebase-auth.js`),
-    import(`https://www.gstatic.com/firebasejs/${V}/firebase-firestore.js`),
+    import("https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js"),
+    import("https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js"),
+    import("https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js"),
   ]);
   const a = app.initializeApp(CONFIG);
   fb = { auth: auth.getAuth(a), A: auth, store: fs.getFirestore(a), fs };
