@@ -1268,6 +1268,168 @@
       ), /* @__PURE__ */ React.createElement("button", { type: "button", onClick: () => deleteTx(tx.id), style: { color: C.textFaint } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 15, lineHeight: 1 } }, "\u2715")))
     ))));
   }
+  // ---- Puente con Becker App ----
+  // Becker App y Rumbo guardan los datos en el celular, en direcciones distintas: no pueden leerse
+  // entre sí. Becker App manda el resumen del entrenamiento en el link (rumbo.html#becker=...) y
+  // además lo copia; si Rumbo está instalada en la pantalla de inicio, se pega con un botón.
+  var BECKER_URL = "https://becker-app.vercel.app/";
+  var BECKER_KEY = "rumbo.becker";
+  function decodeBecker(text) {
+    const m = String(text || "").match(/becker=([A-Za-z0-9_-]+)/);
+    const code = m ? m[1] : String(text || "").trim();
+    if (!/^[A-Za-z0-9_-]{8,}$/.test(code)) return null;
+    try {
+      const bytes = Uint8Array.from(atob(code.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
+      const d = JSON.parse(new TextDecoder().decode(bytes));
+      if (!d || d.v !== 1 || !/^\d{4}-\d{2}-\d{2}$/.test(d.f)) return null;
+      return { fecha: d.f, nombre: String(d.n || "Entrenamiento").slice(0, 80), minutos: Number(d.m) || 0, series: Number(d.s) || 0, ejercicios: Number(d.e) || 0, volumen: Number(d.kg) || 0 };
+    } catch (e) {
+      return null;
+    }
+  }
+  function readBecker() {
+    try {
+      return JSON.parse(localStorage.getItem(BECKER_KEY)) || [];
+    } catch (e) {
+      return [];
+    }
+  }
+  function saveBecker(entry) {
+    const list = readBecker().filter((x) => !(x.fecha === entry.fecha && x.nombre === entry.nombre));
+    list.push({ ...entry, recibido: Date.now() });
+    list.sort((a, b) => (a.fecha < b.fecha ? -1 : 1));
+    const kept = list.slice(-120);
+    try {
+      localStorage.setItem(BECKER_KEY, JSON.stringify(kept));
+    } catch (e) {
+    }
+    return kept;
+  }
+  var BECKER_INCOMING = (function() {
+    try {
+      if (/^#becker=/.test(location.hash)) {
+        const e = decodeBecker(location.hash);
+        history.replaceState(null, "", location.pathname + location.search);
+        if (e) {
+          saveBecker(e);
+          return e;
+        }
+      }
+    } catch (e) {
+    }
+    return null;
+  })();
+  function BeckerCard({ todayKey }) {
+    const [list, setList] = useState(readBecker);
+    const [msg, setMsg] = useState(BECKER_INCOMING ? `Anotado desde Becker App: ${BECKER_INCOMING.nombre}` : "");
+    const hoy = list.filter((x) => x.fecha === todayKey);
+    const desde = fmtDate(new Date(Date.now() - 6 * 864e5));
+    const semana = list.filter((x) => x.fecha >= desde && x.fecha <= todayKey).length;
+    const pegar = async () => {
+      let text = "";
+      try {
+        text = await navigator.clipboard.readText();
+      } catch (e) {
+      }
+      if (!decodeBecker(text)) text = window.prompt("Peg\xE1 ac\xE1 lo que copi\xF3 Becker App") || "";
+      const e = decodeBecker(text);
+      if (!e) {
+        setMsg("No encontr\xE9 un entrenamiento de Becker App en lo que pegaste.");
+        return;
+      }
+      setList(saveBecker(e));
+      setMsg(`Anotado: ${e.nombre}`);
+    };
+    const btn = "flex-1 rounded-xl py-2.5 text-xs font-semibold text-center";
+    return /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-4 mb-5", style: { background: C.card, border: `1px solid ${C.borderSoft}` } }, /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_MONO, color: C.gold }, className: "text-xs uppercase tracking-widest mb-2" }, "Becker App"), hoy.length ? hoy.map((x) => /* @__PURE__ */ React.createElement("p", { key: x.nombre, style: { fontFamily: FONT_BODY, color: C.sage }, className: "text-sm font-semibold mb-1" }, "✓ Hoy entrenaste: ", x.nombre, /* @__PURE__ */ React.createElement("span", { style: { color: C.textMuted, fontWeight: 400 } }, " \xB7 ", x.minutos, " min \xB7 ", x.series, " series", x.volumen ? ` \xB7 ${x.volumen.toLocaleString("es")} kg` : ""))) : /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textMuted }, className: "text-sm mb-1" }, "Todav\xEDa no anotaste el entreno de hoy."), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-xs mb-3" }, semana, " ", semana === 1 ? "entrenamiento" : "entrenamientos", " en los \xFAltimos 7 d\xEDas"), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, /* @__PURE__ */ React.createElement("a", { href: BECKER_URL, target: "_blank", rel: "noopener", style: { fontFamily: FONT_BODY, background: C.gold, color: C.onAccent }, className: btn }, "Entrenar en Becker App"), /* @__PURE__ */ React.createElement("button", { type: "button", onClick: pegar, style: { fontFamily: FONT_BODY, background: C.card2, color: C.text, border: `1px solid ${C.border}` }, className: btn }, "Pegar desde Becker App")), msg && /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textMuted }, className: "text-xs mt-2.5" }, msg));
+  }
+  // ---- Avisos: recordatorios que se guardan en el calendario del celular ----
+  // Las apps web no pueden avisar con la app cerrada sin un servidor; el calendario sí suena siempre.
+  var AVISOS_KEY = "rumbo.avisos";
+  var RUMBO_URL = "https://beckerlastrelaureano.github.io/rumbo/rumbo.html";
+  var ICS_DAYS = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"];
+  var AVISOS_BASE = [
+    { id: "ritual", titulo: "Ritual de la ma\xF1ana", hora: "07:00", dias: [0, 1, 2, 3, 4, 5, 6], on: true },
+    { id: "entreno", titulo: "Entreno", hora: "18:00", dias: [0, 2, 4], on: true },
+    { id: "habitos", titulo: "Revisar los h\xE1bitos del d\xEDa", hora: "22:00", dias: [0, 1, 2, 3, 4, 5, 6], on: true }
+  ];
+  function readAvisos() {
+    try {
+      const v = JSON.parse(localStorage.getItem(AVISOS_KEY));
+      if (Array.isArray(v)) return v;
+    } catch (e) {
+    }
+    return AVISOS_BASE.map((a) => ({ ...a, dias: [...a.dias] }));
+  }
+  function buildIcs(avisos) {
+    const pad = (n) => String(n).padStart(2, "0");
+    const now = /* @__PURE__ */ new Date();
+    const stamp = `${now.getUTCFullYear()}${pad(now.getUTCMonth() + 1)}${pad(now.getUTCDate())}T${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}${pad(now.getUTCSeconds())}Z`;
+    const esc2 = (s) => String(s).replace(/\\/g, "\\\\").replace(/[,;]/g, (c) => "\\" + c).replace(/\n/g, "\\n");
+    const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Rumbo//Avisos//ES", "CALSCALE:GREGORIAN", "METHOD:PUBLISH"];
+    avisos.filter((a) => a.on && a.dias.length && /^\d{2}:\d{2}$/.test(a.hora)).forEach((a) => {
+      // Primer día que coincide con los días elegidos, desde hoy.
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      for (let k = 0; k < 7 && !a.dias.includes(weekdayIndex(d)); k++) d.setDate(d.getDate() + 1);
+      const [hh, mm] = a.hora.split(":");
+      lines.push(
+        "BEGIN:VEVENT",
+        `UID:rumbo-${a.id}@beckerlastrelaureano.github.io`,
+        `DTSTAMP:${stamp}`,
+        `DTSTART:${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${hh}${mm}00`,
+        "DURATION:PT15M",
+        `RRULE:FREQ=WEEKLY;BYDAY=${a.dias.slice().sort().map((i) => ICS_DAYS[i]).join(",")}`,
+        `SUMMARY:${esc2(`Rumbo \xB7 ${a.titulo}`)}`,
+        `DESCRIPTION:${esc2(`Abr\xED Rumbo: ${RUMBO_URL}`)}`,
+        `URL:${RUMBO_URL}`,
+        "BEGIN:VALARM",
+        "ACTION:DISPLAY",
+        `DESCRIPTION:${esc2(a.titulo)}`,
+        "TRIGGER:PT0M",
+        "END:VALARM",
+        "END:VEVENT"
+      );
+    });
+    lines.push("END:VCALENDAR");
+    return lines.join("\r\n") + "\r\n";
+  }
+  function RemindersView() {
+    const [avisos, setAvisos] = useState(readAvisos);
+    const [nuevo, setNuevo] = useState("");
+    const [msg, setMsg] = useState("");
+    const persist = (next) => {
+      setAvisos(next);
+      try {
+        localStorage.setItem(AVISOS_KEY, JSON.stringify(next));
+      } catch (e) {
+      }
+    };
+    const patch = (id, p) => persist(avisos.map((a) => (a.id === id ? { ...a, ...p } : a)));
+    const toggleDia = (a, i) => patch(a.id, { dias: a.dias.includes(i) ? a.dias.filter((x) => x !== i) : [...a.dias, i] });
+    const agregar = () => {
+      if (!nuevo.trim()) return;
+      persist([...avisos, { id: uid(), titulo: nuevo.trim().slice(0, 60), hora: "12:00", dias: [0, 1, 2, 3, 4, 5, 6], on: true }]);
+      setNuevo("");
+    };
+    const activos = avisos.filter((a) => a.on && a.dias.length);
+    const descargar = () => {
+      if (!activos.length) {
+        setMsg("Activ\xE1 al menos un aviso con alg\xFAn d\xEDa elegido.");
+        return;
+      }
+      const blob = new Blob([buildIcs(avisos)], { type: "text/calendar;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "rumbo-avisos.ics";
+      document.body.append(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4e3);
+      setMsg('Se descarg\xF3 "rumbo-avisos.ics". En el iPhone toc\xE1 "Agregar todo" para sumarlos al Calendario.');
+    };
+    const inputStyle = { fontFamily: FONT_BODY, background: C.card2, border: `1px solid ${C.border}`, color: C.text };
+    return /* @__PURE__ */ React.createElement("div", { className: "pb-10" }, /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text }, className: "text-2xl mb-1" }, "Avisos"), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm mb-5" }, "Eleg\xED tus recordatorios y sumalos al calendario del celular: suenan aunque Rumbo est\xE9 cerrada."), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-3 mb-5" }, avisos.map((a) => /* @__PURE__ */ React.createElement("div", { key: a.id, className: "rounded-2xl p-4", style: { background: C.card, border: `1px solid ${C.borderSoft}`, opacity: a.on ? 1 : 0.55 } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 mb-3" }, /* @__PURE__ */ React.createElement("button", { type: "button", onClick: () => patch(a.id, { on: !a.on }), "aria-pressed": a.on, "aria-label": a.on ? "Desactivar" : "Activar", className: "rounded-full shrink-0", style: { width: 40, height: 24, background: a.on ? C.gold : C.border, position: "relative", transition: "background 150ms" } }, /* @__PURE__ */ React.createElement("span", { className: "rounded-full", style: { position: "absolute", top: 3, left: a.on ? 19 : 3, width: 18, height: 18, background: C.text, transition: "left 150ms" } })), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.text }, className: "flex-1 text-sm font-semibold min-w-0 truncate" }, a.titulo), /* @__PURE__ */ React.createElement("input", { type: "time", value: a.hora, onChange: (e) => patch(a.id, { hora: e.target.value }), style: inputStyle, className: "rounded-lg px-2 py-1.5 text-sm outline-none", "aria-label": `Hora de ${a.titulo}` })), /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-1.5" }, DAYS.map((d, i) => /* @__PURE__ */ React.createElement(Chip, { key: d, active: a.dias.includes(i), color: C.teal, onClick: () => toggleDia(a, i), small: true }, d.slice(0, 2))), !AVISOS_BASE.some((b) => b.id === a.id) && /* @__PURE__ */ React.createElement("button", { type: "button", onClick: () => persist(avisos.filter((x) => x.id !== a.id)), style: { fontFamily: FONT_BODY, color: C.danger }, className: "text-xs ml-auto px-1" }, "Eliminar"))))), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mb-5" }, /* @__PURE__ */ React.createElement("input", { value: nuevo, onChange: (e) => setNuevo(e.target.value), onKeyDown: (e) => e.key === "Enter" && agregar(), placeholder: "Nuevo aviso (ej.: Tomar agua)", maxLength: 60, style: inputStyle, className: "flex-1 rounded-xl px-3 py-2.5 text-sm outline-none" }), /* @__PURE__ */ React.createElement("button", { type: "button", onClick: agregar, style: { fontFamily: FONT_BODY, background: C.card2, color: C.text, border: `1px solid ${C.border}` }, className: "rounded-xl px-4 text-sm font-semibold" }, "Agregar")), /* @__PURE__ */ React.createElement("button", { type: "button", onClick: descargar, style: { fontFamily: FONT_BODY, background: C.gold, color: C.onAccent }, className: "w-full rounded-xl py-3 text-sm font-semibold mb-3" }, "Agregar ", activos.length, " ", activos.length === 1 ? "aviso" : "avisos", " al calendario"), msg && /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textMuted }, className: "text-xs mb-3" }, msg), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-xs leading-relaxed" }, "Si cambi\xE1s un horario, borr\xE1 del Calendario los avisos viejos de Rumbo y volv\xE9 a agregarlos. Si en la app instalada no se descarga, abr\xED Rumbo en Safari y toc\xE1 el bot\xF3n de nuevo."));
+  }
   function WorkoutView({ exercises, onChangeExercises, workoutLogs, todayKey, onToggle }) {
     const [activeDay, setActiveDay] = useState(DAYS[weekdayIndex(/* @__PURE__ */ new Date())]);
     const [name, setName] = useState("");
@@ -1311,7 +1473,7 @@
       if (editingId === id) setEditingId(null);
     };
     const doneCount = dayExercises.filter((ex) => todayLogs[ex.id]).length;
-    return /* @__PURE__ */ React.createElement("div", { className: "pb-10" }, /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text }, className: "text-2xl mb-1" }, "Entrenamiento"), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm mb-5" }, "Tu rutina de ejercicios, d\xEDa por d\xEDa."), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 overflow-x-auto pb-2 mb-4 -mx-1 px-1" }, DAYS.map((d) => /* @__PURE__ */ React.createElement(Chip, { key: d, active: activeDay === d, color: C.teal, onClick: () => setActiveDay(d), small: true }, d.slice(0, 3)))), dayExercises.length > 0 && /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_MONO, color: C.textFaint }, className: "text-xs mb-3" }, doneCount, "/", dayExercises.length, " hechos hoy"), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-2 mb-5" }, dayExercises.length === 0 && /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm text-center py-4" }, "Nada cargado para ", activeDay.toLowerCase(), "."), dayExercises.map(
+    return /* @__PURE__ */ React.createElement("div", { className: "pb-10" }, /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text }, className: "text-2xl mb-1" }, "Entrenamiento"), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm mb-5" }, "Tu rutina de ejercicios, d\xEDa por d\xEDa."), /* @__PURE__ */ React.createElement(BeckerCard, { todayKey }), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 overflow-x-auto pb-2 mb-4 -mx-1 px-1" }, DAYS.map((d) => /* @__PURE__ */ React.createElement(Chip, { key: d, active: activeDay === d, color: C.teal, onClick: () => setActiveDay(d), small: true }, d.slice(0, 3)))), dayExercises.length > 0 && /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_MONO, color: C.textFaint }, className: "text-xs mb-3" }, doneCount, "/", dayExercises.length, " hechos hoy"), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-2 mb-5" }, dayExercises.length === 0 && /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm text-center py-4" }, "Nada cargado para ", activeDay.toLowerCase(), "."), dayExercises.map(
       (ex) => editingId === ex.id ? /* @__PURE__ */ React.createElement(
         "div",
         {
@@ -1830,7 +1992,7 @@
     const [goals, setGoals] = useState([]);
     const [notes, setNotes] = useState([]);
     const [weekPlan, setWeekPlan] = useState({});
-    const [tab, setTab] = useState("inicio");
+    const [tab, setTab] = useState(BECKER_INCOMING ? "entreno" : "inicio");
     const [filter, setFilter] = useState("todas");
     const [sheet, setSheet] = useState(null);
     const [bursts, setBursts] = useState([]);
@@ -2127,7 +2289,8 @@
         { id: "finanzas", label: "Finanzas" },
         { id: "notas", label: "Notas" },
         { id: "semana", label: "Semana" },
-        { id: "nutricion", label: "Nutrici\xF3n" }
+        { id: "nutricion", label: "Nutrici\xF3n" },
+        { id: "avisos", label: "Avisos" }
       ].map((t) => /* @__PURE__ */ React.createElement(
         "button",
         {
@@ -2405,7 +2568,7 @@
         todayKey,
         onToggle: toggleWorkout
       }
-    ), tab === "metas" && /* @__PURE__ */ React.createElement(GoalsView, { goals, onChange: persistGoals }), tab === "rueda" && /* @__PURE__ */ React.createElement(WheelView, { wheel, onChange: persistWheel }), tab === "finanzas" && /* @__PURE__ */ React.createElement(FinanceView, { finance, onChange: persistFinance, monthKeyPrefix }), tab === "notas" && /* @__PURE__ */ React.createElement(NotesView, { notes, onChange: persistNotes }), tab === "semana" && /* @__PURE__ */ React.createElement(WeekPlannerView, { weekPlan, onChange: persistWeekPlan }), tab === "nutricion" && /* @__PURE__ */ React.createElement(NutritionView, { nutrition, onChange: persistNutrition })))), tab === "inicio" && /* @__PURE__ */ React.createElement(
+    ), tab === "metas" && /* @__PURE__ */ React.createElement(GoalsView, { goals, onChange: persistGoals }), tab === "rueda" && /* @__PURE__ */ React.createElement(WheelView, { wheel, onChange: persistWheel }), tab === "finanzas" && /* @__PURE__ */ React.createElement(FinanceView, { finance, onChange: persistFinance, monthKeyPrefix }), tab === "notas" && /* @__PURE__ */ React.createElement(NotesView, { notes, onChange: persistNotes }), tab === "semana" && /* @__PURE__ */ React.createElement(WeekPlannerView, { weekPlan, onChange: persistWeekPlan }), tab === "nutricion" && /* @__PURE__ */ React.createElement(NutritionView, { nutrition, onChange: persistNutrition }), tab === "avisos" && /* @__PURE__ */ React.createElement(RemindersView, null)))), tab === "inicio" && /* @__PURE__ */ React.createElement(
       "button",
       {
         type: "button",
