@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Rumbo</title>
 <link rel="manifest" href="manifest.json" />
-<meta name="theme-color" content="#12141F" />
+<meta name="theme-color" content="#0D0E10" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -14,16 +14,34 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png" />
 <link rel="stylesheet" href="tailwind.min.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 <script src="react.production.min.js"></script>
 <script src="react-dom.production.min.js"></script>
 <style>
-  html, body { margin: 0; padding: 0; background: #12141F; }
+  html, body { margin: 0; padding: 0; background: #0D0E10; }
+  body { font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; }
+  ::-webkit-scrollbar { width: 8px; height: 6px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #2A2E32; border-radius: 6px; }
+  * { scrollbar-color: #2A2E32 transparent; scrollbar-width: thin; }
+  /* Clases del rediseño que no están en el tailwind.min.css recortado */
+  .hidden { display: none; }
+  .grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+  .gap-7 { gap: 1.75rem; } .p-5 { padding: 1.25rem; } .py-2\.5 { padding-top: .625rem; padding-bottom: .625rem; }
+  .pt-5 { padding-top: 1.25rem; } .pb-4 { padding-bottom: 1rem; } .pb-32 { padding-bottom: 8rem; }
+  .mt-10 { margin-top: 2.5rem; } .mb-7 { margin-bottom: 1.75rem; } .mx-auto { margin-left: auto; margin-right: auto; }
+  .max-w-5xl { max-width: 64rem; } .justify-around { justify-content: space-around; }
+  .bottom-24 { bottom: 6rem; } .right-5 { right: 1.25rem; } .right-0 { right: 0; }
+  .rb-noscroll { scrollbar-width: none; } .rb-noscroll::-webkit-scrollbar { display: none; }
+  @media (min-width: 640px) {
+    .sm\:flex { display: flex; } .sm\:hidden { display: none; } .sm\:bottom-6 { bottom: 1.5rem; } .sm\:pb-24 { padding-bottom: 6rem; }
+  }
+  @media (min-width: 768px) {
+    .md\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } .md\:row-span-2 { grid-row: span 2 / span 2; }
+  }
   @keyframes confetti-fall {
     0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
     100% { transform: translateY(70vh) rotate(360deg); opacity: 0; }
   }
-  input::placeholder, textarea::placeholder { color: #5D6178; }
+  input::placeholder, textarea::placeholder { color: #5B6267; }
   * { -webkit-tap-highlight-color: transparent; }
 </style>
 <script>
@@ -109,24 +127,25 @@
     };
   }
   var C = {
-    bg: "#12141F",
-    bgSoft: "#171A28",
-    card: "#1C2032",
-    card2: "#232739",
-    border: "#2B3046",
-    borderSoft: "#242942",
-    text: "#EDEBE3",
-    textMuted: "#9497AC",
-    textFaint: "#5D6178",
-    gold: "#2E97AC",
-    onAccent: "#EEF6F7",
-    mustard: "#C9A15A",
-    sage: "#7FBFA0",
-    violet: "#B79CED",
-    blue: "#6FA8DC",
-    rose: "#E8909D",
-    teal: "#63C9C9",
-    danger: "#E27D6B"
+    // Paleta Becker: negro carbón, blanco y un único acento verde pizarra.
+    bg: "#0D0E10",
+    bgSoft: "#121416",
+    card: "#15171A",
+    card2: "#1B1E21",
+    border: "#262A2E",
+    borderSoft: "#202326",
+    text: "#ECEEEF",
+    textMuted: "#8B9297",
+    textFaint: "#5B6267",
+    gold: "#5F8788",
+    onAccent: "#FFFFFF",
+    mustard: "#B8A27A",
+    sage: "#8FAE9F",
+    violet: "#A59BBD",
+    blue: "#8AA3B8",
+    rose: "#B98F95",
+    teal: "#7FA9A9",
+    danger: "#D9806E"
   };
   function withAlpha(hex, alpha) {
     const h = hex.replace("#", "");
@@ -135,9 +154,9 @@
     const b = parseInt(h.substring(4, 6), 16);
     return `rgba(${r},${g},${b},${alpha})`;
   }
-  var FONT_DISPLAY = "'Fraunces', serif";
-  var FONT_BODY = "'Inter', sans-serif";
-  var FONT_MONO = "'Space Mono', monospace";
+  var FONT_DISPLAY = "'Montserrat', sans-serif";
+  var FONT_BODY = "'Montserrat', sans-serif";
+  var FONT_MONO = "'Montserrat', sans-serif";
   var CATEGORIES = [
     { id: "salud", label: "Salud", color: C.sage },
     { id: "finanzas", label: "Finanzas", color: C.blue },
@@ -1867,6 +1886,123 @@
       }
     )))));
   }
+  var SECTIONS = [
+    { id: "hoy", label: "Hoy", views: [["home", "Resumen"], ["inicio", "H\xE1bitos"], ["rutina", "Agenda"], ["ritual", "Ritual"], ["panel", "Panel"]] },
+    { id: "cuerpo", label: "Cuerpo", views: [["entreno", "Entreno"], ["nutricion", "Nutrici\xF3n"]] },
+    { id: "metas", label: "Metas", views: [["metas", "Metas"], ["semana", "Semana"], ["rueda", "Rueda"]] },
+    { id: "finanzas", label: "Finanzas", views: [["finanzas", "Finanzas"]] },
+    { id: "notas", label: "Notas", views: [["notas", "Notas"]] }
+  ];
+  var sectionOf = (tab) => SECTIONS.find((sec) => sec.views.some(([v]) => v === tab));
+  var LABEL = { fontFamily: FONT_BODY, fontSize: 11, fontWeight: 500, letterSpacing: "0.3em", textTransform: "uppercase" };
+  var TAB_ICONS = {
+    hoy: "M12 4a8 8 0 1 0 0 16a8 8 0 1 0 0-16M12 8v4l3 2",
+    cuerpo: "M6 9v6M18 9v6M3 11v2M21 11v2M6 12h12",
+    metas: "M12 4a8 8 0 1 0 0 16a8 8 0 1 0 0-16M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8",
+    finanzas: "M5 6h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2M3 10h18",
+    notas: "M6 3h9l3 3v15H6zM9 11h6M9 15h6"
+  };
+  function BrandLockup() {
+    const h = React.createElement;
+    return h("div", { className: "flex items-center gap-3" },
+      h("div", { style: { width: 34, height: 34, borderRadius: "50%", border: `1.5px solid ${C.gold}`, display: "grid", placeItems: "center", color: C.text, fontWeight: 600, fontSize: 16 } }, "B"),
+      h("div", null,
+        h("div", { style: { color: C.text, fontWeight: 400, fontSize: 16, letterSpacing: "0.42em", lineHeight: 1.2 } }, "B\u039ECKER"),
+        h("div", { className: "flex items-center gap-2", style: { color: C.gold, fontSize: 9, letterSpacing: "0.5em" } },
+          h("span", { style: { width: 12, height: 1, background: C.gold, opacity: 0.6 } }), "RUMBO", h("span", { style: { width: 12, height: 1, background: C.gold, opacity: 0.6 } }))));
+  }
+  function BrandHeader({ tab, setTab, name, onAvatar }) {
+    const h = React.createElement;
+    const current = sectionOf(tab);
+    return h("div", { className: "mb-6" },
+      h("header", { className: "flex items-center justify-between pb-4 mb-4", style: { borderBottom: `1px solid ${C.border}` } },
+        h(BrandLockup),
+        h("nav", { className: "hidden sm:flex gap-7" }, SECTIONS.map((sec) => h("button", {
+          key: sec.id, type: "button", onClick: () => setTab(sec.views[0][0]),
+          style: { ...LABEL, fontSize: 11, letterSpacing: "0.22em", color: current && current.id === sec.id ? C.text : C.textMuted, borderBottom: `1px solid ${current && current.id === sec.id ? C.gold : "transparent"}`, paddingBottom: 6 }
+        }, sec.label))),
+        h("button", { type: "button", onClick: onAvatar, "aria-label": "Cuenta y ajustes", style: { width: 34, height: 34, borderRadius: "50%", background: C.card2, border: `1px solid ${C.border}`, color: C.textMuted, fontSize: 13, fontWeight: 600 } }, (name || "?").charAt(0).toUpperCase())),
+      current && current.views.length > 1 && h("div", { className: "flex gap-2 overflow-x-auto pb-1 rb-noscroll" }, current.views.map(([v, label]) => h("button", {
+        key: v, type: "button", onClick: () => setTab(v),
+        style: { fontFamily: FONT_BODY, fontSize: 12, padding: "6px 14px", borderRadius: 99, whiteSpace: "nowrap", color: tab === v ? C.text : C.textMuted, background: tab === v ? withAlpha(C.gold, 0.18) : "transparent", border: `1px solid ${tab === v ? withAlpha(C.gold, 0.5) : C.border}` }
+      }, label))));
+  }
+  function BottomTabs({ tab, setTab }) {
+    const h = React.createElement;
+    const current = sectionOf(tab);
+    return h("nav", { className: "sm:hidden fixed left-0 right-0 bottom-0 z-30 flex justify-around", style: { background: "rgba(13,14,16,0.94)", backdropFilter: "blur(10px)", borderTop: `1px solid ${C.border}`, padding: "8px 4px calc(8px + env(safe-area-inset-bottom))" } },
+      SECTIONS.map((sec) => {
+        const on = current && current.id === sec.id;
+        return h("button", { key: sec.id, type: "button", onClick: () => setTab(sec.views[0][0]), className: "flex flex-col items-center gap-1", style: { minWidth: 56, color: on ? C.text : C.textFaint, fontFamily: FONT_BODY, fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase" } },
+          h("svg", { viewBox: "0 0 24 24", width: 22, height: 22, fill: "none", stroke: on ? C.gold : "currentColor", strokeWidth: 1.5, strokeLinecap: "round", strokeLinejoin: "round" }, h("path", { d: TAB_ICONS[sec.id] })),
+          sec.label);
+      }));
+  }
+  function HomeCard({ n, title, onClick, wide, children }) {
+    const h = React.createElement;
+    return h("button", { type: "button", onClick, className: "text-left rounded-2xl p-5 flex flex-col gap-3 transition-colors" + (wide ? " md:row-span-2" : ""), style: { background: C.card, border: `1px solid ${C.border}`, color: C.text, fontFamily: FONT_BODY } },
+      h("div", { className: "flex items-center justify-between w-full" },
+        h("span", { style: { ...LABEL, color: C.textMuted } }, h("span", { style: { color: C.gold } }, n), "\xA0\xA0", title),
+        h("span", { style: { color: C.textFaint, fontSize: 18 } }, "\u2192")),
+      children);
+  }
+  function MiniBar({ pct }) {
+    return React.createElement("div", { style: { height: 3, background: C.border, borderRadius: 3, overflow: "hidden", width: "100%" } }, React.createElement("div", { style: { height: "100%", width: `${Math.max(0, Math.min(100, pct))}%`, background: C.gold, borderRadius: 3 } }));
+  }
+  function HomeDashboard({ name, greeting, dateLabel, quote, habits, todayLogs, overallPct, agenda, goals, finance, notes, nutrition, monthKeyPrefix, setTab }) {
+    const h = React.createElement;
+    const big = { fontSize: 30, fontWeight: 300, letterSpacing: "-0.02em", lineHeight: 1.1 };
+    const muted = { color: C.textMuted, fontSize: 13 };
+    const nowHM = (/* @__PURE__ */ new Date()).toTimeString().slice(0, 5);
+    const sortedAgenda = [...(agenda || [])].sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+    const next = sortedAgenda.find((a) => (a.time || "") >= nowHM);
+    const pending = habits.filter((x) => !todayLogs[x.id]);
+    const doneCount = habits.length - pending.length;
+    const cloud = readBeckerCloud();
+    const desde = fmtDate(new Date(Date.now() - 6 * 864e5));
+    const semana = cloud && cloud.sesiones ? cloud.sesiones.filter((x) => x.fecha >= desde).length : null;
+    const plan = cloud && cloud.plan ? cloud.plan.find((u) => u.dia === weekdayIndex(/* @__PURE__ */ new Date())) : null;
+    const meals = nutrition && nutrition[DAYS[weekdayIndex(/* @__PURE__ */ new Date())]] || {};
+    const mealCount = Object.values(meals).filter((v) => v && String(v).trim()).length;
+    const activeGoals = (goals || []).filter((g) => !g.done);
+    const goal = activeGoals[0];
+    const tx = (finance && finance.transactions || []).filter((t) => t.date && t.date.startsWith(monthKeyPrefix));
+    const gastos = tx.filter((t) => t.type === "gasto").reduce((a, t) => a + t.amount, 0);
+    const ingresos = tx.filter((t) => t.type === "ingreso").reduce((a, t) => a + t.amount, 0);
+    const fmt = (n) => "$ " + Math.round(n).toLocaleString("es-AR");
+    const lastNote = (notes || [])[0];
+    const r = 46, circ = 2 * Math.PI * r;
+    return h("div", { className: "pb-6" },
+      h("p", { style: { ...LABEL, color: C.textMuted } }, dateLabel),
+      h("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text, fontWeight: 300, fontSize: "clamp(28px, 5vw, 38px)", letterSpacing: "-0.01em" }, className: "mt-1" }, greeting, ", ", h("strong", { style: { fontWeight: 600 } }, name)),
+      h("p", { className: "mt-3 mb-7", style: { borderLeft: `2px solid ${C.gold}`, paddingLeft: 14, color: C.text, fontWeight: 300, maxWidth: 620 } }, quote),
+      h("div", { className: "grid gap-4 grid-cols-1 md:grid-cols-3" },
+        h(HomeCard, { n: "01", title: "Hoy", onClick: () => setTab("inicio"), wide: true },
+          h("div", { className: "flex items-center gap-5 w-full" },
+            h("svg", { viewBox: "0 0 104 104", width: 100, height: 100, style: { flex: "none" } },
+              h("circle", { cx: 52, cy: 52, r, fill: "none", stroke: C.border, strokeWidth: 5 }),
+              h("circle", { cx: 52, cy: 52, r, fill: "none", stroke: C.gold, strokeWidth: 5, strokeLinecap: "round", strokeDasharray: circ, strokeDashoffset: circ * (1 - overallPct / 100), transform: "rotate(-90 52 52)" }),
+              h("text", { x: 52, y: 58, textAnchor: "middle", fill: C.text, fontSize: 20, fontWeight: 300, fontFamily: "Montserrat" }, overallPct, "%")),
+            h("div", { style: muted }, h("div", { style: { color: C.text, fontSize: 15 } }, doneCount, " de ", habits.length, " h\xE1bitos"), "completados hoy")),
+          next && h("div", { className: "w-full rounded-xl px-4 py-3", style: { background: withAlpha(C.gold, 0.14), fontSize: 13 } }, "Pr\xF3ximo: ", h("b", { style: { fontWeight: 600 } }, next.time, " \xB7 ", next.activity)),
+          h("div", { className: "w-full" }, pending.slice(0, 5).map((x, i) => h("div", { key: x.id, className: "flex items-center gap-3 py-2.5", style: { borderTop: i ? `1px solid ${C.border}` : "none", fontSize: 14 } },
+            h("span", { style: { width: 16, height: 16, borderRadius: "50%", border: `1.5px solid ${C.textFaint}`, flex: "none" } }), x.name)),
+            pending.length === 0 && habits.length > 0 && h("p", { style: muted }, "Todo hecho por hoy. Bien ah\xED."))),
+        h(HomeCard, { n: "02", title: "Cuerpo", onClick: () => setTab("entreno") },
+          h("div", { style: big }, plan ? plan.nombre : semana !== null ? `${semana} entrenos` : "Entreno"),
+          h("div", { style: muted }, plan ? "Plan de hoy en Becker" : semana !== null ? "en los \xFAltimos 7 d\xEDas" : "Conect\xE1 Becker App para ver tu plan"),
+          h("div", { style: muted }, "Comidas cargadas hoy: ", mealCount)),
+        h(HomeCard, { n: "03", title: "Metas", onClick: () => setTab("metas") },
+          goal ? h(React.Fragment, null, h("div", { style: big }, goal.progress || 0, "%"), h("div", { style: muted }, goal.title), h(MiniBar, { pct: goal.progress || 0 })) : h("div", { style: muted }, "Sin metas activas. Toc\xE1 para crear una."),
+          activeGoals.length > 1 && h("div", { style: muted }, activeGoals.length - 1, " meta", activeGoals.length > 2 ? "s" : "", " m\xE1s")),
+        h(HomeCard, { n: "04", title: "Finanzas", onClick: () => setTab("finanzas") },
+          h("div", { style: big }, fmt(gastos)), h("div", { style: muted }, "gastado este mes"),
+          ingresos > 0 && h(React.Fragment, null, h(MiniBar, { pct: gastos / ingresos * 100 }), h("div", { style: muted }, Math.round(gastos / ingresos * 100), "% de lo que ingres\xF3"))),
+        h(HomeCard, { n: "05", title: "Notas", onClick: () => setTab("notas") },
+          lastNote ? h(React.Fragment, null, h("div", { style: muted }, new Date(lastNote.createdAt).toLocaleDateString("es-AR", { day: "numeric", month: "long" })), h("div", { style: { fontSize: 14, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" } }, "\u201C", lastNote.text, "\u201D")) : h("div", { style: muted }, "Sin notas todav\xEDa."),
+          h("div", { style: muted }, (notes || []).length, (notes || []).length === 1 ? " nota" : " notas"))),
+      h("p", { className: "text-center mt-10", style: { ...LABEL, fontSize: 10, letterSpacing: "0.38em", color: C.textFaint } }, "Una vida que merece ser ", h("span", { style: { color: C.gold } }, "vivida.")));
+  }
   function App() {
     const [loading, setLoading] = useState(true);
     const [profile, setProfile] = useState(null);
@@ -1883,7 +2019,7 @@
     const [goals, setGoals] = useState([]);
     const [notes, setNotes] = useState([]);
     const [weekPlan, setWeekPlan] = useState({});
-    const [tab, setTab] = useState(BECKER_INCOMING ? "entreno" : "inicio");
+    const [tab, setTab] = useState(BECKER_INCOMING ? "entreno" : "home");
     const [filter, setFilter] = useState("todas");
     const [sheet, setSheet] = useState(null);
     const [bursts, setBursts] = useState([]);
@@ -2129,7 +2265,7 @@
     };
     const quote = QUOTES[dayOfYear(now) % QUOTES.length];
     const greeting = now.getHours() < 12 ? "Buen d\xEDa" : now.getHours() < 19 ? "Buenas tardes" : "Buenas noches";
-    const dateLabel = now.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
+    const dateLabel = now.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" }).replace(",", " \xB7");
     const existingNames = habits.map((h) => h.name.toLowerCase());
     if (loading) {
       return /* @__PURE__ */ React.createElement("div", { className: "min-h-screen flex items-center justify-center", style: { background: C.bg } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: FONT_MONO, color: C.textFaint }, className: "text-sm" }, "Cargando..."));
@@ -2156,61 +2292,33 @@
       {
         className: "flex flex-col",
         style: {
-          width: 108,
+          width: 280,
           background: C.bgSoft,
-          borderRight: `1px solid ${C.border}`,
+          borderLeft: `1px solid ${C.border}`,
           position: "fixed",
           top: 0,
-          left: 0,
+          right: 0,
           height: "100vh",
           zIndex: 50,
-          transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)",
+          transform: sidebarOpen ? "translateX(0)" : "translateX(100%)",
           transition: "transform 220ms ease"
         }
       },
-      /* @__PURE__ */ React.createElement("div", { className: "px-4 pt-6 pb-6" }, /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_MONO, color: C.gold }, className: "text-xs tracking-widest uppercase" }, "Rumbo")),
-      /* @__PURE__ */ React.createElement("nav", { className: "flex-1 flex flex-col gap-1 px-3 overflow-y-auto" }, [
-        { id: "inicio", label: "Hoy" },
-        { id: "panel", label: "Panel" },
-        { id: "ritual", label: "Ritual" },
-        { id: "rutina", label: "Rutina" },
-        { id: "entreno", label: "Entreno" },
-        { id: "metas", label: "Metas" },
-        { id: "rueda", label: "Rueda" },
-        { id: "finanzas", label: "Finanzas" },
-        { id: "notas", label: "Notas" },
-        { id: "semana", label: "Semana" },
-        { id: "nutricion", label: "Nutrici\xF3n" },
-        { id: "avisos", label: "Avisos" },
-        { id: "cuenta", label: "Cuenta" }
-      ].map((t) => /* @__PURE__ */ React.createElement(
-        "button",
-        {
-          key: t.id,
-          type: "button",
-          onClick: () => {
-            setTab(t.id);
-            setSidebarOpen(false);
-          },
-          style: {
-            fontFamily: FONT_BODY,
-            background: tab === t.id ? withAlpha(C.gold, 0.16) : "transparent",
-            color: tab === t.id ? C.gold : C.textMuted,
-            borderLeft: `2px solid ${tab === t.id ? C.gold : "transparent"}`
-          },
-          className: "text-left rounded-r-lg pl-3 pr-2 py-2 text-xs font-semibold transition-colors"
-        },
-        t.label
-      ))),
+      /* @__PURE__ */ React.createElement("div", { className: "px-5 pt-6 pb-4" }, React.createElement("p", { style: { ...LABEL, color: C.textMuted } }, "Cuenta y ajustes")),
+      React.createElement("nav", { className: "flex-1 flex flex-col gap-1 px-3" }, [["cuenta", "Cuenta y sincronizaci\xF3n"], ["avisos", "Avisos y recordatorios"]].map(([id, label]) => React.createElement("button", {
+        key: id, type: "button", onClick: () => { setTab(id); setSidebarOpen(false); },
+        style: { fontFamily: FONT_BODY, color: tab === id ? C.text : C.textMuted, background: tab === id ? withAlpha(C.gold, 0.16) : "transparent" },
+        className: "text-left rounded-lg px-3 py-2.5 text-sm"
+      }, label))),
       /* @__PURE__ */ React.createElement("div", { className: "px-3 pb-6 relative" }, /* @__PURE__ */ React.createElement(
         "button",
         {
           type: "button",
           onClick: () => setSettingsOpen((v) => !v),
           style: { fontFamily: FONT_BODY, color: C.textFaint },
-          className: "text-left rounded-lg px-3 py-2.5 text-xs w-full"
+          className: "text-left rounded-lg px-3 py-2.5 text-sm w-full"
         },
-        "Ajustes"
+        "Nombre y datos"
       ), settingsOpen && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
         "div",
         {
@@ -2224,7 +2332,7 @@
       ), /* @__PURE__ */ React.createElement(
         "div",
         {
-          className: "absolute left-full bottom-0 ml-2 z-50 rounded-2xl p-3 w-56",
+          className: "relative z-50 rounded-2xl p-3 w-full mt-2",
           style: { background: C.card2, border: `1px solid ${C.border}` }
         },
         !editingName && !resetConfirm && /* @__PURE__ */ React.createElement("div", { className: "flex flex-col" }, /* @__PURE__ */ React.createElement(
@@ -2330,17 +2438,7 @@
           "Cancelar"
         )))
       )))
-    ), /* @__PURE__ */ React.createElement("main", { className: "flex-1 min-w-0 px-5 sm:px-8 pt-6 pb-24 overflow-y-auto" }, /* @__PURE__ */ React.createElement("div", { className: "max-w-lg" }, /* @__PURE__ */ React.createElement(SyncBanner, null), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 mb-5" }, /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        type: "button",
-        onClick: () => setSidebarOpen(true),
-        style: { color: C.textMuted },
-        className: "p-1 -ml-1",
-        "aria-label": "Abrir men\xFA"
-      },
-      /* @__PURE__ */ React.createElement("span", { style: { fontSize: 20, lineHeight: 1 } }, "\u2630")
-    ), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_MONO, color: C.gold }, className: "text-xs tracking-widest uppercase" }, "Rumbo")), tab === "inicio" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text }, className: "text-2xl mb-0.5 capitalize" }, greeting, ", ", profile.name), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm mb-5 capitalize" }, dateLabel), /* @__PURE__ */ React.createElement(
+    ), /* @__PURE__ */ React.createElement("main", { className: "flex-1 min-w-0 px-4 sm:px-8 pt-5 pb-32 sm:pb-24 overflow-y-auto" }, /* @__PURE__ */ React.createElement("div", { className: "max-w-5xl mx-auto" }, /* @__PURE__ */ React.createElement(SyncBanner, null), React.createElement(BrandHeader, { tab, setTab, name: profile.name, onAvatar: () => setSidebarOpen(true) }), tab === "home" && React.createElement(HomeDashboard, { name: profile.name, greeting, dateLabel, quote, habits, todayLogs, overallPct, agenda, goals, finance, notes, nutrition, monthKeyPrefix, setTab }), tab === "inicio" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text, fontWeight: 300 }, className: "text-2xl mb-4" }, "H\xE1bitos de hoy"), /* @__PURE__ */ React.createElement(
       "div",
       {
         className: "rounded-2xl p-4 mb-5",
@@ -2466,10 +2564,10 @@
         type: "button",
         onClick: () => setSheet({ mode: "create" }),
         style: { background: C.gold, color: C.onAccent },
-        className: "fixed bottom-6 right-6 rounded-full w-14 h-14 flex items-center justify-center shadow-lg z-30"
+        className: "fixed bottom-24 sm:bottom-6 right-5 sm:right-6 rounded-full w-14 h-14 flex items-center justify-center shadow-lg z-30"
       },
       /* @__PURE__ */ React.createElement("span", { style: { fontSize: 26, fontWeight: 700, lineHeight: 1 } }, "+")
-    ), sheet && /* @__PURE__ */ React.createElement(
+    ), React.createElement(BottomTabs, { tab, setTab }), sheet && React.createElement(
       HabitSheet,
       {
         initial: sheet.mode === "edit" ? sheet.initial : { timeBlock: sheet.presetBlock },
