@@ -2378,7 +2378,11 @@
   function BrandLockup() {
     const h = React.createElement;
     return h("div", { className: "flex items-center gap-3" },
-      h("div", { style: { width: 34, height: 34, borderRadius: "50%", border: `1.5px solid ${C.gold}`, display: "grid", placeItems: "center", color: C.text, fontWeight: 600, fontSize: 16 } }, "B"),
+      // Isotipo de Becker Center: anillo verde pizarra con la barra y la B.
+      h("svg", { viewBox: "0 0 100 100", width: 36, height: 36, "aria-hidden": "true", style: { flex: "none" } },
+        h("circle", { cx: 50, cy: 50, r: 45, fill: "none", stroke: C.gold, strokeWidth: 5 }),
+        h("rect", { x: 33, y: 29, width: 6, height: 42, fill: C.text }),
+        h("path", { d: "M44 32H57a9 9 0 0 1 0 18H44M44 50H59a10 10 0 0 1 0 18H44", fill: "none", stroke: C.text, strokeWidth: 6 })),
       h("div", null,
         h("div", { style: { color: C.text, fontWeight: 400, fontSize: 16, letterSpacing: "0.42em", lineHeight: 1.2 } }, "B\u039ECKER"),
         h("div", { className: "flex items-center gap-2", style: { color: C.gold, fontSize: 9, letterSpacing: "0.5em" } },
