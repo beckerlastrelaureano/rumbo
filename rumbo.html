@@ -2098,6 +2098,10 @@
       { id: "p12", text: "Porque no s\xE9 si es mi \xFAltimo d\xEDa vivo y debo disfrutarlo" }
     ],
     sistemas: [],
+    harada: {
+      goal: "",
+      pillars: Array.from({ length: 8 }, (_, i) => ({ id: "hp" + i, text: "", actions: Array.from({ length: 8 }, (_2, j) => ({ id: "hp" + i + "a" + j, text: "", done: false })) }))
+    },
     checks: {}
   };
   var cardBox = { background: C.card, border: `1px solid ${C.borderSoft}` };
@@ -2284,6 +2288,66 @@
       }),
       h("button", { type: "button", onClick: add, style: { fontFamily: FONT_BODY, background: C.gold, color: C.onAccent }, className: "w-full rounded-xl py-3 text-sm font-semibold mt-2" }, "+ Crear sistema"));
   }
+  // Método Harada (Open Window 64): meta central, 8 pilares y 8 acciones por pilar.
+  // Posiciones de un bloque 3x3 sin el centro (4), en sentido horario desde arriba a la izquierda.
+  var HARADA_POS = [0, 1, 2, 5, 8, 7, 6, 3];
+  function HaradaView({ data, onChange, onCreateHabit, habitNames }) {
+    const h = React.createElement;
+    const harada = data.harada || DEFAULT_DISCIPLINA.harada;
+    const [sel, setSel] = useState(null);
+    const save = (next) => onChange({ ...data, harada: next });
+    const setPillar = (i, p) => save({ ...harada, pillars: harada.pillars.map((x, k) => k === i ? { ...x, ...p } : x) });
+    const setAction = (i, j, p) => setPillar(i, { actions: harada.pillars[i].actions.map((a, k) => k === j ? { ...a, ...p } : a) });
+    const all = harada.pillars.flatMap((p) => p.actions);
+    const filled = all.filter((a) => a.text.trim()).length;
+    const done = all.filter((a) => a.text.trim() && a.done).length;
+    const cell = (text, opts = {}) => h("div", { style: { background: opts.bg || C.card2, color: opts.color || C.textMuted, fontSize: opts.size || 8, fontWeight: opts.bold ? 600 : 400, lineHeight: 1.15, padding: 2, borderRadius: 4, aspectRatio: "1", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", overflowWrap: "break-word", hyphens: "auto", textDecoration: opts.strike ? "line-through" : "none" } }, text);
+    const block = (b) => {
+      const isCenter = b === 4;
+      const pi = isCenter ? -1 : HARADA_POS.indexOf(b);
+      const cells = Array.from({ length: 9 }, (_, c) => {
+        if (isCenter) {
+          if (c === 4) return cell(harada.goal || "Meta", { bg: withAlpha(C.gold, 0.35), color: C.text, bold: true, size: 9 });
+          const p = harada.pillars[HARADA_POS.indexOf(c)];
+          return cell(p.text || "Pilar " + (HARADA_POS.indexOf(c) + 1), { bg: withAlpha(C.gold, 0.15), color: p.text ? C.text : C.textFaint, bold: true });
+        }
+        const p = harada.pillars[pi];
+        if (c === 4) return cell(p.text || "Pilar " + (pi + 1), { bg: withAlpha(C.gold, 0.15), color: p.text ? C.text : C.textFaint, bold: true });
+        const a = p.actions[HARADA_POS.indexOf(c)];
+        return cell(a.text || "", { bg: a.done && a.text ? withAlpha(C.sage, 0.3) : C.card2, color: a.done ? C.textFaint : C.textMuted, strike: a.done });
+      });
+      return h("button", { key: b, type: "button", onClick: () => setSel(isCenter ? "meta" : pi), style: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 2, padding: 3, borderRadius: 8, border: `1px solid ${sel === (isCenter ? "meta" : pi) ? C.gold : C.borderSoft}`, background: C.card } }, cells.map((x, k) => h(React.Fragment, { key: k }, x)));
+    };
+    const p = typeof sel === "number" ? harada.pillars[sel] : null;
+    return h("div", { className: "pb-10" },
+      h("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text }, className: "text-2xl mb-1" }, "M\xE9todo Harada"),
+      h("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm mb-4" }, "Una meta en el centro, 8 pilares que la sostienen y 8 acciones por pilar: 64 acciones. Toc\xE1 un bloque para completarlo."),
+      h("div", { className: "rounded-2xl p-4 mb-4", style: cardBox },
+        h("div", { className: "flex items-baseline justify-between mb-2" },
+          h("span", { style: { ...LABEL, color: C.textMuted, fontSize: 10 } }, "Acciones"),
+          h("span", { style: { color: C.text, fontSize: 13 } }, filled, "/64 cargadas \xB7 ", done, " hechas")),
+        h(MiniBar, { pct: done / 64 * 100 })),
+      h("div", { className: "mb-5 mx-auto", style: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 4, maxWidth: 560 } }, Array.from({ length: 9 }, (_, b) => block(b))),
+      sel === "meta" && h("div", { className: "rounded-2xl p-4", style: cardBox },
+        h("label", { style: { color: C.text, fontSize: 12, fontWeight: 600 }, className: "block mb-1" }, "Meta central"),
+        h("textarea", { rows: 2, value: harada.goal, onChange: (e) => save({ ...harada, goal: e.target.value }), placeholder: "Ej.: Ser l\xEDder de mi marca y ganar 500K al mes antes de los 25", style: fieldStyle, className: "w-full rounded-xl px-3 py-2 text-sm outline-none resize-none mb-3" }),
+        h("p", { style: { color: C.textMuted, fontSize: 12 }, className: "mb-2" }, "Los 8 pilares (lo que necesit\xE1s para lograrla):"),
+        harada.pillars.map((x, i) => h("input", { key: x.id, value: x.text, onChange: (e) => setPillar(i, { text: e.target.value }), placeholder: "Pilar " + (i + 1) + (i === 0 ? " — ej.: Cuerpo" : i === 1 ? " — ej.: Finanzas" : i === 2 ? " — ej.: Marca personal" : ""), style: fieldStyle, className: "w-full rounded-lg px-3 py-2 text-sm outline-none mb-2" }))),
+      p && h("div", { className: "rounded-2xl p-4", style: cardBox },
+        h("label", { style: { color: C.text, fontSize: 12, fontWeight: 600 }, className: "block mb-1" }, "Pilar ", sel + 1),
+        h("input", { value: p.text, onChange: (e) => setPillar(sel, { text: e.target.value }), placeholder: "Nombre del pilar", style: fieldStyle, className: "w-full rounded-xl px-3 py-2.5 text-sm outline-none mb-3" }),
+        h("p", { style: { color: C.textMuted, fontSize: 12 }, className: "mb-2" }, "8 acciones concretas. Tild\xE1 las que ya cumpliste; las que se repiten, pasalas a h\xE1bitos."),
+        p.actions.map((a, j) => {
+          const isHabit = a.text.trim() && habitNames.includes(a.text.trim().toLowerCase());
+          return h("div", { key: a.id, className: "flex items-center gap-2 mb-2" },
+            h("button", { type: "button", onClick: () => setAction(sel, j, { done: !a.done }), "aria-label": "Marcar", className: "shrink-0 flex items-center justify-center", style: { width: 22, height: 22, borderRadius: 6, border: `2px solid ${a.done ? C.sage : C.textFaint}`, background: a.done ? C.sage : "transparent", color: C.bg, fontSize: 12, fontWeight: 700 } }, a.done ? "✓" : ""),
+            h("input", { value: a.text, onChange: (e) => setAction(sel, j, { text: e.target.value }), placeholder: "Acci\xF3n " + (j + 1), style: { ...fieldStyle, textDecoration: a.done ? "line-through" : "none" }, className: "flex-1 min-w-0 rounded-lg px-3 py-2 text-sm outline-none" }),
+            a.text.trim() && (isHabit ? h("span", { style: { color: C.sage, fontSize: 11 }, title: "Ya es un h\xE1bito" }, "↻") : h(SmallBtn, { onClick: () => onCreateHabit(a.text.trim()) }, "+ H\xE1bito")));
+        }),
+        h("div", { className: "flex gap-2 mt-3" },
+          h(SmallBtn, { onClick: () => setSel(sel > 0 ? sel - 1 : 7) }, "← Anterior"),
+          h(SmallBtn, { onClick: () => setSel(sel < 7 ? sel + 1 : 0) }, "Siguiente →"))));
+  }
   function DailyLearnCard({ lesson }) {
     const h = React.createElement;
     const [cat, title, text] = lesson;
@@ -2298,7 +2362,7 @@
   var SECTIONS = [
     { id: "hoy", label: "Hoy", views: [["home", "Resumen"], ["inicio", "H\xE1bitos"], ["rutina", "Agenda"], ["ritual", "Ritual"], ["panel", "Panel"]] },
     { id: "cuerpo", label: "Cuerpo", views: [["entreno", "Entreno"], ["nutricion", "Nutrici\xF3n"]] },
-    { id: "metas", label: "Metas", views: [["objetivos", "Objetivos"], ["sistemas", "Sistemas"], ["porque", "\xBFPor qu\xE9?"], ["metas", "Metas"], ["semana", "Semana"], ["rueda", "Rueda"]] },
+    { id: "metas", label: "Metas", views: [["objetivos", "Objetivos"], ["sistemas", "Sistemas"], ["harada", "Harada"], ["porque", "\xBFPor qu\xE9?"], ["metas", "Metas"], ["semana", "Semana"], ["rueda", "Rueda"]] },
     { id: "finanzas", label: "Finanzas", views: [["finanzas", "Finanzas"]] },
     { id: "notas", label: "Notas", views: [["notas", "Notas"]] }
   ];
@@ -2994,7 +3058,7 @@
         todayKey,
         onToggle: toggleWorkout
       }
-    ), tab === "metas" && /* @__PURE__ */ React.createElement(GoalsView, { goals, onChange: persistGoals }), tab === "objetivos" && React.createElement(ObjectivesView, { data: disciplina, onChange: persistDisciplina }), tab === "sistemas" && React.createElement(SystemsView, { data: disciplina, onChange: persistDisciplina, onCreateHabit: createHabitFromSystem, habitNames: existingNames }), tab === "porque" && React.createElement(WhyView, { data: disciplina, onChange: persistDisciplina }), tab === "rueda" && /* @__PURE__ */ React.createElement(WheelView, { wheel, onChange: persistWheel }), tab === "finanzas" && /* @__PURE__ */ React.createElement(FinanceView, { finance, onChange: persistFinance, monthKeyPrefix }), tab === "notas" && /* @__PURE__ */ React.createElement(NotesView, { notes, onChange: persistNotes }), tab === "semana" && /* @__PURE__ */ React.createElement(WeekPlannerView, { weekPlan, onChange: persistWeekPlan }), tab === "nutricion" && /* @__PURE__ */ React.createElement(NutritionView, { nutrition, onChange: persistNutrition }), tab === "avisos" && /* @__PURE__ */ React.createElement(RemindersView, null), tab === "cuenta" && /* @__PURE__ */ React.createElement(CuentaView, null)))), tab === "inicio" && /* @__PURE__ */ React.createElement(
+    ), tab === "metas" && /* @__PURE__ */ React.createElement(GoalsView, { goals, onChange: persistGoals }), tab === "objetivos" && React.createElement(ObjectivesView, { data: disciplina, onChange: persistDisciplina }), tab === "sistemas" && React.createElement(SystemsView, { data: disciplina, onChange: persistDisciplina, onCreateHabit: createHabitFromSystem, habitNames: existingNames }), tab === "harada" && React.createElement(HaradaView, { data: disciplina, onChange: persistDisciplina, onCreateHabit: createHabitFromSystem, habitNames: existingNames }), tab === "porque" && React.createElement(WhyView, { data: disciplina, onChange: persistDisciplina }), tab === "rueda" && /* @__PURE__ */ React.createElement(WheelView, { wheel, onChange: persistWheel }), tab === "finanzas" && /* @__PURE__ */ React.createElement(FinanceView, { finance, onChange: persistFinance, monthKeyPrefix }), tab === "notas" && /* @__PURE__ */ React.createElement(NotesView, { notes, onChange: persistNotes }), tab === "semana" && /* @__PURE__ */ React.createElement(WeekPlannerView, { weekPlan, onChange: persistWeekPlan }), tab === "nutricion" && /* @__PURE__ */ React.createElement(NutritionView, { nutrition, onChange: persistNutrition }), tab === "avisos" && /* @__PURE__ */ React.createElement(RemindersView, null), tab === "cuenta" && /* @__PURE__ */ React.createElement(CuentaView, null)))), tab === "inicio" && /* @__PURE__ */ React.createElement(
       "button",
       {
         type: "button",
