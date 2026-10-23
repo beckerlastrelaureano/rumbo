@@ -1886,10 +1886,419 @@
       }
     )))));
   }
+  // ---- Objetivos por período, sistemas de disciplina, frase y aprendizaje del día ----
+  var BOOK_QUOTES = [
+    ["Somos lo que hacemos repetidamente. La excelencia no es un acto, es un hábito.", "Will Durant, La historia de la filosof\xEDa"],
+    ["No subís al nivel de tus metas, caés al nivel de tus sistemas.", "James Clear, H\xE1bitos at\xF3micos"],
+    ["Cada acci\xF3n es un voto por el tipo de persona en la que te quer\xE9s convertir.", "James Clear, H\xE1bitos at\xF3micos"],
+    ["Mejorar un 1% cada d\xEDa te hace 37 veces mejor en un a\xF1o.", "James Clear, H\xE1bitos at\xF3micos"],
+    ["Empez\xE1 con el fin en la mente.", "Stephen Covey, Los 7 h\xE1bitos de la gente altamente efectiva"],
+    ["Lo primero es lo primero.", "Stephen Covey, Los 7 h\xE1bitos de la gente altamente efectiva"],
+    ["Busc\xE1 primero entender, despu\xE9s ser entendido.", "Stephen Covey, Los 7 h\xE1bitos de la gente altamente efectiva"],
+    ["Quien tiene un porqu\xE9 para vivir puede soportar casi cualquier c\xF3mo.", "Viktor Frankl, El hombre en busca de sentido"],
+    ["Entre el est\xEDmulo y la respuesta hay un espacio: ah\xED est\xE1 tu libertad.", "Viktor Frankl, El hombre en busca de sentido"],
+    ["Disciplina es libertad.", "Jocko Willink, Disciplina es libertad"],
+    ["No hay malos equipos, solo malos l\xEDderes.", "Jocko Willink, Responsabilidad extrema"],
+    ["Ganale a la ma\xF1ana y le gan\xE1s al d\xEDa.", "Robin Sharma, El Club de las 5 de la ma\xF1ana"],
+    ["Lo que hagas en la primera hora define la calidad del resto del d\xEDa.", "Robin Sharma, El Club de las 5 de la ma\xF1ana"],
+    ["P\xE1gate a vos primero: ahorr\xE1 antes de gastar.", "George S. Clason, El hombre m\xE1s rico de Babilonia"],
+    ["Una parte de todo lo que gan\xE1s es tuya para conservar.", "George S. Clason, El hombre m\xE1s rico de Babilonia"],
+    ["Los ricos compran activos; los dem\xE1s compran pasivos creyendo que son activos.", "Robert Kiyosaki, Padre rico, padre pobre"],
+    ["No trabajes por dinero: hac\xE9 que el dinero trabaje para vos.", "Robert Kiyosaki, Padre rico, padre pobre"],
+    ["La riqueza es lo que no ves: el auto que no compraste.", "Morgan Housel, La psicolog\xEDa del dinero"],
+    ["El inter\xE9s compuesto premia a quien tiene paciencia.", "Morgan Housel, La psicolog\xEDa del dinero"],
+    ["Lo que te dec\xEDs a vos mismo se convierte en tu realidad.", "Napoleon Hill, Piense y h\xE1gase rico"],
+    ["Todo logro empieza con un deseo ardiente y un plan definido.", "Napoleon Hill, Piense y h\xE1gase rico"],
+    ["El obst\xE1culo es el camino.", "Ryan Holiday, El obst\xE1culo es el camino"],
+    ["El ego es el enemigo de lo que quer\xE9s y de lo que ya ten\xE9s.", "Ryan Holiday, El ego es el enemigo"],
+    ["La disciplina es destino.", "Ryan Holiday, La disciplina es destino"],
+    ["No es que tengamos poco tiempo, es que perdemos mucho.", "S\xE9neca, Sobre la brevedad de la vida"],
+    ["Ten\xE9s poder sobre tu mente, no sobre los hechos. Entend\xE9 eso y vas a encontrar fuerza.", "Marco Aurelio, Meditaciones"],
+    ["Al amanecer, decite: hoy me levanto para hacer el trabajo de un ser humano.", "Marco Aurelio, Meditaciones"],
+    ["Nadie es libre si no es due\xF1o de s\xED mismo.", "Epicteto, Enquiridi\xF3n"],
+    ["Hac\xE9 una sola cosa: la que hace que todo lo dem\xE1s sea m\xE1s f\xE1cil o innecesario.", "Gary Keller, Solo una cosa"],
+    ["El \xE9xito se construye de forma secuencial, una cosa a la vez.", "Gary Keller, Solo una cosa"],
+    ["El trabajo profundo es el superpoder de esta \xE9poca.", "Cal Newport, Enf\xF3cate"],
+    ["S\xE9 tan bueno que no puedan ignorarte.", "Cal Newport, Hazlo tan bien que no puedan ignorarte"],
+    ["Interesate de verdad por los dem\xE1s.", "Dale Carnegie, C\xF3mo ganar amigos e influir sobre las personas"],
+    ["El nombre de una persona es para ella el sonido m\xE1s dulce.", "Dale Carnegie, C\xF3mo ganar amigos e influir sobre las personas"],
+    ["Comete el sapo: hac\xE9 primero la tarea m\xE1s dif\xEDcil.", "Brian Tracy, \xA1Tr\xE1gate ese sapo!"],
+    ["Los l\xEDderes comen al final.", "Simon Sinek, Los l\xEDderes comen al final"],
+    ["Empez\xE1 por el porqu\xE9.", "Simon Sinek, La clave es el porqu\xE9"],
+    ["La mentalidad de crecimiento cree que las habilidades se desarrollan con esfuerzo.", "Carol Dweck, Mindset"],
+    ["Todav\xEDa no: dos palabras que cambian un fracaso en aprendizaje.", "Carol Dweck, Mindset"],
+    ["El talento cuenta una vez; el esfuerzo cuenta dos.", "Angela Duckworth, Grit"],
+    ["La pasi\xF3n se descubre, se desarrolla y se profundiza con los a\xF1os.", "Angela Duckworth, Grit"],
+    ["No te tomes nada personalmente.", "Miguel Ruiz, Los cuatro acuerdos"],
+    ["Hac\xE9 siempre tu m\xE1ximo esfuerzo.", "Miguel Ruiz, Los cuatro acuerdos"],
+    ["Toda gran haza\xF1a fue alguna vez considerada imposible.", "Paulo Coelho, El alquimista"],
+    ["Cuando quer\xE9s algo, todo el universo conspira para que lo consigas.", "Paulo Coelho, El alquimista"],
+    ["La resistencia es m\xE1s fuerte justo antes de terminar.", "Steven Pressfield, La guerra del arte"],
+    ["El profesional aparece todos los d\xEDas, tenga ganas o no.", "Steven Pressfield, La guerra del arte"],
+    ["Pod\xE9s sufrir el dolor de la disciplina o el del arrepentimiento.", "Jim Rohn, Las cinco piezas clave del rompecabezas de la vida"],
+    ["Trabaj\xE1 m\xE1s en vos mismo que en tu trabajo.", "Jim Rohn, Las cinco piezas clave del rompecabezas de la vida"],
+    ["La mente que se abre a una nueva idea nunca vuelve a su tama\xF1o original.", "Oliver Wendell Holmes"],
+    ["Endurec\xE9 tu mente haciendo lo que no quer\xE9s hacer.", "David Goggins, Nada puede lastimarme"],
+    ["Cuando cre\xE9s que terminaste, solo usaste el 40% de tu capacidad.", "David Goggins, Nada puede lastimarme"],
+    ["El dinero es un buen sirviente y un mal amo.", "T. Harv Eker, Los secretos de la mente millonaria"],
+    ["Tu ingreso crece hasta donde crece tu persona.", "T. Harv Eker, Los secretos de la mente millonaria"],
+    ["Lo que se mide, mejora.", "Peter Drucker, La gerencia efectiva"],
+    ["La mejor forma de predecir el futuro es crearlo.", "Peter Drucker"],
+    ["El ahora es todo lo que ten\xE9s.", "Eckhart Tolle, El poder del ahora"],
+    ["La felicidad depende de la calidad de tus pensamientos.", "Marco Aurelio, Meditaciones"],
+    ["Una peque\xF1a victoria cada d\xEDa construye una gran vida.", "Darren Hardy, El efecto compuesto"],
+    ["Peque\xF1as decisiones inteligentes + constancia + tiempo = gran diferencia.", "Darren Hardy, El efecto compuesto"]
+  ];
+  var LEARN_CATS = {
+    finanzas: { label: "Finanzas", color: C.blue },
+    desarrollo: { label: "Desarrollo personal", color: C.mustard },
+    comunicacion: { label: "Comunicaci\xF3n", color: C.rose },
+    liderazgo: { label: "Liderazgo", color: C.gold },
+    idiomas: { label: "Idiomas", color: C.violet },
+    historia: { label: "Historia", color: C.teal },
+    cultura: { label: "Cultura general", color: C.sage }
+  };
+  var LESSONS = [
+    ["finanzas", "Inter\xE9s compuesto", "Si invert\xEDs y reinvert\xEDs lo que gan\xE1s, las ganancias tambi\xE9n generan ganancias. Con 10% anual, el dinero se duplica en unos 7 a\xF1os (regla del 72: 72 \xF7 tasa = a\xF1os para duplicar)."],
+    ["finanzas", "P\xE1gate primero", "Apenas cobr\xE1s, separ\xE1 un porcentaje fijo (10–20%) para ahorro o inversi\xF3n antes de gastar. As\xED el ahorro no depende de lo que sobra."],
+    ["finanzas", "Fondo de emergencia", "Antes de invertir en algo de riesgo, junt\xE1 entre 3 y 6 meses de gastos en algo l\xEDquido. Te da calma y evita vender inversiones en mal momento."],
+    ["finanzas", "Activo vs. pasivo", "Un activo pone dinero en tu bolsillo (un negocio, una inversi\xF3n, una app que vende). Un pasivo lo saca (cuotas, suscripciones). Para tu meta de 400/500K, sum\xE1 activos."],
+    ["finanzas", "Diversificar", "No pongas todo en una sola inversi\xF3n. Repartir entre distintos activos reduce el riesgo de que una mala noticia te arruine."],
+    ["finanzas", "Inflaci\xF3n", "Si tu plata est\xE1 quieta y la inflaci\xF3n es 3% mensual, en un a\xF1o perdi\xF3 casi un tercio de poder de compra. Por eso conviene que trabaje."],
+    ["finanzas", "Precio por valor", "En la venta de servicios, cobr\xE1 por el resultado que gener\xE1s, no por las horas. Un cliente paga por el problema que le resolv\xE9s."],
+    ["finanzas", "Regla 50/30/20", "50% del ingreso a necesidades, 30% a gustos, 20% a ahorro e inversi\xF3n. Es un punto de partida simple para ordenar el mes."],
+    ["finanzas", "Costo de oportunidad", "Cada peso o cada hora que us\xE1s en algo, deja de estar disponible para otra cosa. Antes de comprar preguntate: \xBFqu\xE9 dejo de lograr con esto?"],
+    ["desarrollo", "Ley de Parkinson", "El trabajo se expande hasta ocupar el tiempo disponible. Ponete plazos cortos: 30 minutos para la marca personal rinden m\xE1s si los cerr\xE1s con alarma."],
+    ["desarrollo", "Apilar h\xE1bitos", "Atar un h\xE1bito nuevo a uno que ya ten\xE9s: “Despu\xE9s de cepillarme los dientes, leo 20 hojas”. El h\xE1bito viejo funciona como disparador."],
+    ["desarrollo", "Regla de los 2 minutos", "Cuando un h\xE1bito cuesta, achicalo a 2 minutos: “tocar la guitarra” se vuelve “agarrar la guitarra y tocar un acorde”. Lo importante es aparecer."],
+    ["desarrollo", "Nunca falles dos veces", "Saltear un d\xEDa es un accidente; saltear dos es el comienzo de otro h\xE1bito. Si fallaste ayer, hoy es obligatorio volver."],
+    ["desarrollo", "Matriz de Eisenhower", "Separ\xE1 tareas en urgente/importante. Lo importante y no urgente (entrenar, leer, la tesis) es lo que m\xE1s cambia tu vida y lo que m\xE1s se posterga."],
+    ["desarrollo", "Dopamina y celular", "El celular da recompensas r\xE1pidas que hacen que leer o estudiar parezcan aburridos. Tus 3 momentos sin celu al d\xEDa entrenan tu atenci\xF3n."],
+    ["desarrollo", "Sue\xF1o y madrugar", "Para levantarte temprano sin destruirte, adelant\xE1 la hora de dormir, no solo la alarma. Entre 7 y 9 horas de sue\xF1o sostienen memoria, \xE1nimo y m\xFAsculo."],
+    ["desarrollo", "Pr\xE1ctica deliberada", "Mejorar no es repetir lo que ya sab\xE9s: es practicar justo lo que te cuesta, con feedback. En guitarra, toc\xE1 lento la parte que fall\xE1s."],
+    ["desarrollo", "T\xE9cnica Pomodoro", "25 minutos de foco total + 5 de descanso. Cuatro pomodoros y un descanso largo. Ideal para sentarte con la tesis: 1 hora son 2 pomodoros."],
+    ["desarrollo", "Identidad primero", "En vez de “quiero leer un libro por mes”, pens\xE1 “soy un lector”. Los h\xE1bitos que encajan con tu identidad duran m\xE1s."],
+    ["desarrollo", "Revisi\xF3n semanal", "Una vez por semana mir\xE1 qu\xE9 objetivos cumpliste, qu\xE9 fall\xF3 y por qu\xE9. Sin revisi\xF3n no hay ajuste, y sin ajuste no hay sistema."],
+    ["comunicacion", "Escucha activa", "Repet\xED con tus palabras lo que te dijeron antes de responder: “O sea que lo que te preocupa es…”. La otra persona se siente entendida y evit\xE1s malentendidos."],
+    ["comunicacion", "Pitch de 30 segundos", "Para cerrar clientes: qui\xE9n sos, a qui\xE9n ayud\xE1s, qu\xE9 problema resolv\xE9s y un resultado concreto. Practicalo en voz alta hasta que salga natural."],
+    ["comunicacion", "Preguntas abiertas", "Las preguntas que empiezan con “qu\xE9”, “c\xF3mo” o “por qu\xE9” hacen hablar al otro. En una venta, quien m\xE1s pregunta suele ganar."],
+    ["comunicacion", "Gancho en 3 segundos", "En redes y podcasts, la primera frase decide si te siguen escuchando. Empez\xE1 con una pregunta, un dato raro o una promesa clara."],
+    ["comunicacion", "Lenguaje corporal", "Mirada a los ojos, hombros abiertos y manos visibles transmiten confianza. En video, mir\xE1 a la c\xE1mara, no a la pantalla."],
+    ["comunicacion", "Regla de tres", "Las ideas en grupos de tres se recuerdan mejor: “Entrenar, leer, crear”. Usalo en presentaciones, posteos y en tu podcast."],
+    ["comunicacion", "Silencio estrat\xE9gico", "Despu\xE9s de decir un precio o hacer una pregunta importante, callate. Llenar el silencio por nervios suele restarte fuerza."],
+    ["comunicacion", "Momentos de valor", "En pareja, lo que m\xE1s suma no es la cantidad de tiempo sino la atenci\xF3n plena: sin celu, mir\xE1ndose, escuchando. Eso cuenta como momento de valor con Maga."],
+    ["liderazgo", "Liderarte primero", "Nadie sigue a quien no cumple lo que promete. Cumplir tus propios objetivos semanales es la base de la autoridad frente a otros."],
+    ["liderazgo", "Responsabilidad extrema", "Ante un problema, preguntate “\xBFqu\xE9 pude haber hecho yo distinto?” antes de culpar. Te devuelve el control."],
+    ["liderazgo", "Delegar bien", "Delegar no es tirar tareas: es explicar el objetivo, el porqu\xE9 y el criterio de \xE9xito, y despu\xE9s dejar hacer."],
+    ["liderazgo", "Feedback SBI", "Situaci\xF3n, Comportamiento, Impacto: “En la reuni\xF3n de ayer (S), llegaste 20 minutos tarde (B) y tuvimos que repetir todo (I)”. Claro y sin atacar."],
+    ["liderazgo", "Dar el ejemplo", "Los equipos copian lo que el l\xEDder hace, no lo que dice. Si quer\xE9s gente puntual, s\xE9 el primero en llegar."],
+    ["liderazgo", "Visi\xF3n clara", "Un l\xEDder explica hacia d\xF3nde van y por qu\xE9 importa. Tu marca personal necesita una frase que diga eso en una l\xEDnea."],
+    ["liderazgo", "Reconocer en p\xFAblico", "Felicit\xE1 en p\xFAblico, correg\xED en privado. Es una regla simple que cuida la confianza del equipo."],
+    ["idiomas", "Ingl\xE9s: “build momentum”", "Significa “ganar impulso”. Ej.: “Training early helps me build momentum for the day”. Muy usado en negocios y desarrollo personal."],
+    ["idiomas", "Ingl\xE9s: “follow up”", "Hacer seguimiento. Ej.: “I'll follow up with the client tomorrow”. Clave para cerrar clientes: la mayor\xEDa de las ventas se cierran en el seguimiento."],
+    ["idiomas", "Ingl\xE9s: “mindset”", "Mentalidad. “Growth mindset” es mentalidad de crecimiento: creer que pod\xE9s mejorar con esfuerzo."],
+    ["idiomas", "Ingl\xE9s: “to pitch”", "Presentar una idea para venderla. “I pitched my app to an investor”. Un “pitch deck” es la presentaci\xF3n de un proyecto."],
+    ["idiomas", "Ingl\xE9s: “consistency”", "Constancia. “Consistency beats intensity”: la constancia le gana a la intensidad."],
+    ["idiomas", "Ingl\xE9s: “bottom line”", "Lo esencial o el resultado final. “The bottom line is we need more clients”. Tambi\xE9n es la ganancia neta de una empresa."],
+    ["idiomas", "Portugu\xE9s: “devagar se vai longe”", "“Despacio se llega lejos”. Mismo esp\xEDritu que tus h\xE1bitos: poco cada d\xEDa, mucho al final."],
+    ["idiomas", "Ingl\xE9s: “wake up” vs “get up”", "“Wake up” es despertarse; “get up” es levantarse de la cama. “I wake up at 6 but I get up at 6:05”."],
+    ["historia", "La rutina de Benjamin Franklin", "Se levantaba a las 5 y se preguntaba cada ma\xF1ana: “\xBFQu\xE9 bien har\xE9 hoy?”, y cada noche: “\xBFQu\xE9 bien hice hoy?”. Llevaba una planilla de 13 virtudes, como un registro de h\xE1bitos."],
+    ["historia", "Los estoicos", "Corriente de la Antigua Grecia y Roma (Zen\xF3n, S\xE9neca, Epicteto, Marco Aurelio). Su idea central: enfocarte en lo que depende de vos y aceptar lo que no."],
+    ["historia", "Marco Aurelio", "Emperador romano (121–180 d.C.). Escribi\xF3 “Meditaciones” como un diario personal para disciplinarse, sin intenci\xF3n de publicarlo."],
+    ["historia", "San Mart\xEDn y la disciplina", "Antes de cruzar los Andes (1817), San Mart\xEDn pas\xF3 casi tres a\xF1os entrenando y organizando el Ej\xE9rcito en Mendoza. La haza\xF1a fue, sobre todo, planificaci\xF3n."],
+    ["historia", "La imprenta", "Gutenberg cre\xF3 la imprenta de tipos m\xF3viles hacia 1450. Los libros se abarataron y el conocimiento dej\xF3 de ser solo de unos pocos: por eso hoy pod\xE9s leer un libro por mes."],
+    ["historia", "Bretton Woods y el d\xF3lar", "En 1944 se acord\xF3 que el d\xF3lar ser\xEDa la moneda de referencia mundial, atada al oro. En 1971 EE.UU. cort\xF3 ese lazo y naci\xF3 el dinero fiduciario actual."],
+    ["historia", "El Renacimiento", "Entre los siglos XIV y XVI, en Italia, se volvi\xF3 a poner al ser humano en el centro. Leonardo da Vinci es el ejemplo de alguien que aprend\xEDa de todo: arte, ciencia, ingenier\xEDa."],
+    ["cultura", "Efecto Pigmali\xF3n", "Las expectativas que otros tienen sobre nosotros (y las nuestras) influyen en nuestro rendimiento. Hablate como alguien que ya cumple."],
+    ["cultura", "Principio de Pareto", "El 80% de los resultados suele venir del 20% de las acciones. Busc\xE1 cu\xE1les son tus 2 o 3 acciones que m\xE1s mueven tus objetivos."],
+    ["cultura", "Pilates", "Lo cre\xF3 Joseph Pilates a principios del siglo XX; lo llam\xF3 “Contrology”. Trabaja el centro del cuerpo, la postura y la respiraci\xF3n."],
+    ["cultura", "Por qu\xE9 la guitarra tiene 6 cuerdas", "La afinaci\xF3n est\xE1ndar es Mi-La-Re-Sol-Si-Mi (E-A-D-G-B-E). Una regla para recordarla: “El Amigo De Gustavo Baila Esto”."],
+    ["cultura", "El efecto Zeigarnik", "Recordamos mejor las tareas que dejamos sin terminar. Truco para la tesis: cort\xE1 a mitad de una idea y al d\xEDa siguiente vas a querer volver."],
+    ["cultura", "Masajes y recuperaci\xF3n", "El masaje mejora la circulaci\xF3n y reduce la tensi\xF3n muscular despu\xE9s de entrenar. La recuperaci\xF3n tambi\xE9n es parte del entrenamiento."],
+    ["cultura", "Ciclos de 90 minutos", "El cerebro trabaja en ciclos de foco de unos 90 minutos (ritmo ultradiano). Despu\xE9s de cada ciclo, una pausa corta recupera la atenci\xF3n."],
+    ["cultura", "Podcast: el formato", "La palabra viene de iPod + broadcast (2004). Un episodio no necesita ser largo: 15–20 minutos con un tema claro funcionan muy bien para empezar."]
+  ];
+  var DISCIPLINE_LEVELS = [
+    { n: 0, label: "No s\xE9 lo que quiero", formula: "= Repito", color: C.danger },
+    { n: 1, label: "Deseo", formula: "S\xE9 lo que quiero = Deseo", color: C.blue },
+    { n: 2, label: "Meta", formula: "Deseo + Meta", color: C.blue },
+    { n: 3, label: "Estrategia", formula: "Deseo + Meta + Estrategia", color: C.blue },
+    { n: 4, label: "T\xE1ctica", formula: "Deseo + Meta + Estrategia + T\xE1ctica (plan)", color: C.blue },
+    { n: 5, label: "T\xE9cnica", formula: "Deseo + Meta + Estrategia + T\xE1ctica + T\xE9cnica (acci\xF3n)", color: C.sage }
+  ];
+  var SYSTEM_FIELDS = [
+    ["deseo", "Deseo", "\xBFQu\xE9 quer\xE9s? Ej.: tocar la guitarra de verdad"],
+    ["meta", "Meta", "Medible y con fecha. Ej.: tocar 5 canciones completas antes de marzo"],
+    ["estrategia", "Estrategia", "El camino general. Ej.: aprender acordes base y practicar canciones f\xE1ciles"],
+    ["tactica", "T\xE1ctica (plan)", "Cu\xE1ndo y cu\xE1nto. Ej.: 3 horas por semana, lunes, mi\xE9rcoles y s\xE1bado"],
+    ["tecnica", "T\xE9cnica (acci\xF3n)", "La acci\xF3n concreta diaria. Ej.: 20 minutos de guitarra despu\xE9s de entrenar"]
+  ];
+  var systemLevel = (s) => {
+    let n = 0;
+    for (const [k] of SYSTEM_FIELDS) {
+      if (s[k] && String(s[k]).trim()) n++;
+      else break;
+    }
+    return n;
+  };
+  var weekStart = (d) => {
+    const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    x.setDate(x.getDate() - weekdayIndex(x));
+    return x;
+  };
+  var periodKey = (period, d) => period === "semanal" ? "S" + fmtDate(weekStart(d)) : period === "mensual" ? fmtDate(d).slice(0, 7) : String(d.getFullYear());
+  var PERIODS = [["semanal", "Semanales"], ["mensual", "Mensuales"], ["anual", "Anuales"]];
+  var DEFAULT_DISCIPLINA = {
+    semanal: [
+      { id: "s01", text: "Entrenar m\xEDnimo 4 veces", target: 4 },
+      { id: "s02", text: "Leer 20 hojas todos los d\xEDas", target: 7 },
+      { id: "s03", text: "Planificar todos los d\xEDas mis d\xEDas", target: 7 },
+      { id: "s04", text: "Tener 3 momentos al d\xEDa sin celu (no cuenta leer)", target: 7 },
+      { id: "s05", text: "Tener 5 momentos de valor con Maga ♡", target: 5 },
+      { id: "s06", text: "1 clase de pilates y masajes", target: 1 },
+      { id: "s07", text: "Planificar pyp y tumundo / secundaria", target: 1 },
+      { id: "s08", text: "3 d\xEDas m\xEDnimo de hacer crecer la marca personal (1/2 hora m\xEDnimo por d\xEDa)", target: 3 },
+      { id: "s08a", text: "Ideas", parent: "s08" },
+      { id: "s08b", text: "Apps", parent: "s08" },
+      { id: "s08c", text: "Inversiones", parent: "s08" },
+      { id: "s09", text: "Anotar mis h\xE1bitos todos los d\xEDas", target: 7 },
+      { id: "s10", text: "3 horas de guitarra a lo largo de la semana", target: 3 },
+      { id: "s11", text: "1 d\xEDa limpiar toda la casa", target: 1 },
+      { id: "s12", text: "1 hora a la semana sentarme con la tesis", target: 1 }
+    ],
+    mensual: [
+      { id: "m01", text: "Aprobar todos los parciales" },
+      { id: "m02", text: "400/500K al mes" },
+      { id: "m03", text: "Leer 1 libro", target: 1 },
+      { id: "m04", text: "Cerrar 3 clientes", target: 3 },
+      { id: "m05", text: "La casa limpia todas las semanas", target: 4 },
+      { id: "m06", text: "20/25 d\xEDas de gym", target: 20 },
+      { id: "m07", text: "12/15 horas o llegar a 2 d\xEDas de tocar la guitarra", target: 12 },
+      { id: "m08", text: "2 clases de masajes", target: 2 },
+      { id: "m09", text: "5/7 clases de pilates", target: 5 },
+      { id: "m10", text: "Cambiar el celu por un iPhone 11" },
+      { id: "m11", text: "Tener p\xE1g, podcast, IG y 3 apps activas de la marca personal" },
+      { id: "m11a", text: "IG: llegar a 200 seguidores", parent: "m11" },
+      { id: "m11b", text: "Podcast: hacer 1/2 podcast", parent: "m11" },
+      { id: "m12", text: "Escribir 10 hojas de la tesis", target: 10 }
+    ],
+    anual: [],
+    porque: [
+      { id: "p01", text: "Aprovechar la ma\xF1ana" },
+      { id: "p02", text: "Mejorar mis habilidades" },
+      { id: "p03", text: "Entrenar" },
+      { id: "p04", text: "Ver el amanecer" },
+      { id: "p05", text: "Ganarle 1/2 hora a todos" },
+      { id: "p06", text: "Guitarra (aprender a tocar de una vez)" },
+      { id: "p07", text: "Estudiar" },
+      { id: "p08", text: "Leer y mejorar mis habilidades" },
+      { id: "p09", text: "Convertirme en un l\xEDder" },
+      { id: "p10", text: "Hacerme rico a los 25 a\xF1os" },
+      { id: "p11", text: "Primero debo liderarme a m\xED para liderar a otros/as" },
+      { id: "p12", text: "Porque no s\xE9 si es mi \xFAltimo d\xEDa vivo y debo disfrutarlo" }
+    ],
+    sistemas: [],
+    checks: {}
+  };
+  var cardBox = { background: C.card, border: `1px solid ${C.borderSoft}` };
+  var fieldStyle = { fontFamily: FONT_BODY, background: C.card2, border: `1px solid ${C.border}`, color: C.text };
+  function SmallBtn({ onClick, children, color, bg, disabled }) {
+    return React.createElement("button", { type: "button", onClick, disabled, style: { fontFamily: FONT_BODY, color: color || C.textMuted, background: bg || "transparent", border: bg ? "none" : `1px solid ${C.border}` }, className: "rounded-lg px-2.5 py-1 text-xs font-semibold" }, children);
+  }
+  function ObjectiveItem({ item, isSub, value, onSetValue, onSave, onDelete, onAddSub }) {
+    const h = React.createElement;
+    const [editing, setEditing] = useState(false);
+    const [text, setText] = useState(item.text);
+    const [target, setTarget] = useState(item.target ? String(item.target) : "");
+    const t = item.target > 1 ? item.target : 0;
+    const count = typeof value === "number" ? value : value ? 1 : 0;
+    const done = t ? count >= t : Boolean(value);
+    if (editing) {
+      return h("div", { className: "rounded-xl p-3 mb-2" + (isSub ? " ml-8" : ""), style: { background: C.card2, border: `1px solid ${C.borderSoft}` } },
+        h("input", { value: text, onChange: (e) => setText(e.target.value), style: { ...fieldStyle, background: C.card }, className: "w-full rounded-lg px-3 py-2 text-sm outline-none mb-2" }),
+        !isSub && h("div", { className: "flex items-center gap-2 mb-2" },
+          h("span", { style: { color: C.textMuted, fontSize: 12 } }, "Veces para cumplirlo:"),
+          h("input", { type: "number", min: "0", inputMode: "numeric", value: target, onChange: (e) => setTarget(e.target.value), placeholder: "1", style: { ...fieldStyle, background: C.card, width: 70 }, className: "rounded-lg px-2 py-1.5 text-sm outline-none" })),
+        h("div", { className: "flex gap-2 flex-wrap" },
+          h(SmallBtn, { bg: C.gold, color: C.onAccent, onClick: () => {
+            if (!text.trim()) return;
+            const n = parseInt(target, 10);
+            onSave({ ...item, text: text.trim(), target: n > 1 ? n : void 0 });
+            setEditing(false);
+          } }, "Guardar"),
+          !isSub && h(SmallBtn, { onClick: () => { onAddSub(); setEditing(false); } }, "+ Sub-objetivo"),
+          h(SmallBtn, { bg: C.danger, color: C.bg, onClick: onDelete }, "Eliminar"),
+          h(SmallBtn, { onClick: () => { setText(item.text); setEditing(false); } }, "Cancelar")));
+    }
+    return h("div", { className: "flex items-center gap-3 py-2.5" + (isSub ? " ml-8" : ""), style: { borderTop: `1px solid ${C.borderSoft}` } },
+      t ? h("div", { className: "flex items-center gap-1 shrink-0" },
+        h("button", { type: "button", onClick: () => onSetValue(Math.max(0, count - 1)), style: { width: 26, height: 26, borderRadius: 8, border: `1px solid ${C.border}`, color: C.textMuted } }, "−"),
+        h("span", { style: { minWidth: 38, textAlign: "center", fontSize: 12, fontWeight: 600, color: done ? C.sage : C.text } }, count, "/", t),
+        h("button", { type: "button", onClick: () => onSetValue(count + 1), style: { width: 26, height: 26, borderRadius: 8, border: `1px solid ${C.border}`, color: C.text } }, "+"))
+        : h("button", { type: "button", onClick: () => onSetValue(!value), "aria-label": "Marcar", className: "shrink-0 flex items-center justify-center", style: { width: isSub ? 18 : 22, height: isSub ? 18 : 22, borderRadius: 6, border: `2px solid ${done ? C.sage : C.textFaint}`, background: done ? C.sage : "transparent", color: C.bg, fontSize: 12, fontWeight: 700 } }, done ? "✓" : ""),
+      h("button", { type: "button", onClick: () => setEditing(true), className: "flex-1 text-left", style: { fontFamily: FONT_BODY, color: done ? C.textFaint : C.text, fontSize: isSub ? 13 : 14, textDecoration: done ? "line-through" : "none" } }, item.text));
+  }
+  function ObjectivesView({ data, onChange }) {
+    const h = React.createElement;
+    const [period, setPeriod] = useState("semanal");
+    const [draft, setDraft] = useState("");
+    const [draftTarget, setDraftTarget] = useState("");
+    const now = new Date();
+    const pk = periodKey(period, now);
+    const list = data[period] || [];
+    const checks = data.checks && data.checks[pk] || {};
+    const setList = (next) => onChange({ ...data, [period]: next });
+    const setValue = (id, v) => onChange({ ...data, checks: { ...data.checks || {}, [pk]: { ...checks, [id]: v } } });
+    const add = (parent) => {
+      const text = parent ? "Nuevo sub-objetivo" : draft.trim();
+      if (!text) return;
+      const n = parseInt(draftTarget, 10);
+      const item = { id: uid(), text, ...parent ? { parent } : {}, ...!parent && n > 1 ? { target: n } : {} };
+      if (parent) {
+        const idx = list.findIndex((x) => x.id === parent);
+        let end = idx + 1;
+        while (end < list.length && list[end].parent === parent) end++;
+        setList([...list.slice(0, end), item, ...list.slice(end)]);
+      } else {
+        setList([...list, item]);
+        setDraft("");
+        setDraftTarget("");
+      }
+    };
+    const save = (item) => setList(list.map((x) => x.id === item.id ? item : x));
+    const del = (id) => setList(list.filter((x) => x.id !== id && x.parent !== id));
+    const tops = list.filter((x) => !x.parent);
+    const isDone = (x) => {
+      const v = checks[x.id];
+      return x.target > 1 ? (typeof v === "number" ? v : 0) >= x.target : Boolean(v);
+    };
+    const doneCount = tops.filter(isDone).length;
+    const pct = tops.length ? Math.round(doneCount / tops.length * 100) : 0;
+    const periodLabel = period === "semanal" ? "Semana del " + weekStart(now).toLocaleDateString("es-AR", { day: "numeric", month: "long" }) : period === "mensual" ? now.toLocaleDateString("es-AR", { month: "long", year: "numeric" }) : "A\xF1o " + now.getFullYear();
+    return h("div", { className: "pb-10" },
+      h("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text }, className: "text-2xl mb-1" }, "Objetivos"),
+      h("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm mb-4" }, "Toc\xE1 un objetivo para editarlo. Las marcas se reinician solas cada semana, mes o a\xF1o."),
+      h("div", { className: "flex gap-2 mb-4" }, PERIODS.map(([id, label]) => h(Chip, { key: id, active: period === id, color: C.gold, onClick: () => setPeriod(id) }, label))),
+      h("div", { className: "rounded-2xl p-4 mb-4", style: cardBox },
+        h("div", { className: "flex items-baseline justify-between mb-2" },
+          h("span", { style: { ...LABEL, color: C.textMuted, fontSize: 10 } }, periodLabel),
+          h("span", { style: { color: C.text, fontSize: 22, fontWeight: 300 } }, pct, "%")),
+        h(MiniBar, { pct }),
+        h("p", { style: { color: C.textMuted, fontSize: 12 }, className: "mt-2" }, doneCount, " de ", tops.length, " cumplidos")),
+      h("div", { className: "rounded-2xl px-4 pb-1 mb-4", style: cardBox },
+        list.length === 0 && h("p", { style: { color: C.textFaint, fontSize: 13 }, className: "py-5 text-center" }, period === "anual" ? "Todav\xEDa no cargaste objetivos anuales. \xBFQu\xE9 quer\xE9s lograr este a\xF1o?" : "Sin objetivos todav\xEDa."),
+        list.map((x) => h(ObjectiveItem, { key: x.id + pk, item: x, isSub: Boolean(x.parent), value: checks[x.id], onSetValue: (v) => setValue(x.id, v), onSave: save, onDelete: () => del(x.id), onAddSub: () => add(x.id) }))),
+      h("div", { className: "rounded-2xl p-4", style: cardBox },
+        h("input", { value: draft, onChange: (e) => setDraft(e.target.value), onKeyDown: (e) => e.key === "Enter" && add(), placeholder: "Nuevo objetivo " + (period === "semanal" ? "semanal" : period === "mensual" ? "mensual" : "anual"), style: fieldStyle, className: "w-full rounded-xl px-3.5 py-2.5 text-sm outline-none mb-2.5" }),
+        h("div", { className: "flex items-center gap-2" },
+          h("input", { type: "number", min: "0", inputMode: "numeric", value: draftTarget, onChange: (e) => setDraftTarget(e.target.value), placeholder: "Veces (opcional)", style: fieldStyle, className: "flex-1 rounded-xl px-3.5 py-2.5 text-sm outline-none" }),
+          h("button", { type: "button", disabled: !draft.trim(), onClick: () => add(), style: { fontFamily: FONT_BODY, background: draft.trim() ? C.gold : C.border, color: draft.trim() ? C.onAccent : C.textFaint }, className: "flex-1 rounded-xl py-2.5 text-sm font-semibold" }, "Agregar"))));
+  }
+  function WhyView({ data, onChange }) {
+    const h = React.createElement;
+    const list = data.porque || [];
+    const [draft, setDraft] = useState("");
+    const [editId, setEditId] = useState(null);
+    const [editText, setEditText] = useState("");
+    const setList = (next) => onChange({ ...data, porque: next });
+    const add = () => {
+      if (!draft.trim()) return;
+      setList([...list, { id: uid(), text: draft.trim() }]);
+      setDraft("");
+    };
+    const move = (i, dir) => {
+      const j = i + dir;
+      if (j < 0 || j >= list.length) return;
+      const next = [...list];
+      [next[i], next[j]] = [next[j], next[i]];
+      setList(next);
+    };
+    return h("div", { className: "pb-10" },
+      h("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text }, className: "text-2xl mb-1" }, "\xBFPor qu\xE9 debo levantarme temprano?"),
+      h("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm mb-5" }, "Le\xE9lo cuando suene la alarma. Toc\xE1 una raz\xF3n para editarla."),
+      h("div", { className: "rounded-2xl px-4 py-1 mb-4", style: cardBox },
+        list.map((x, i) => editId === x.id ? h("div", { key: x.id, className: "py-3", style: { borderTop: i ? `1px solid ${C.borderSoft}` : "none" } },
+          h("input", { value: editText, onChange: (e) => setEditText(e.target.value), style: fieldStyle, className: "w-full rounded-lg px-3 py-2 text-sm outline-none mb-2" }),
+          h("div", { className: "flex gap-2 flex-wrap" },
+            h(SmallBtn, { bg: C.gold, color: C.onAccent, onClick: () => { if (editText.trim()) setList(list.map((y) => y.id === x.id ? { ...y, text: editText.trim() } : y)); setEditId(null); } }, "Guardar"),
+            h(SmallBtn, { onClick: () => move(i, -1) }, "↑"),
+            h(SmallBtn, { onClick: () => move(i, 1) }, "↓"),
+            h(SmallBtn, { bg: C.danger, color: C.bg, onClick: () => { setList(list.filter((y) => y.id !== x.id)); setEditId(null); } }, "Eliminar"),
+            h(SmallBtn, { onClick: () => setEditId(null) }, "Cancelar")))
+          : h("button", { key: x.id, type: "button", onClick: () => { setEditId(x.id); setEditText(x.text); }, className: "w-full text-left flex gap-3 py-3", style: { borderTop: i ? `1px solid ${C.borderSoft}` : "none", fontFamily: FONT_BODY } },
+            h("span", { style: { color: C.gold, fontWeight: 600, minWidth: 22, fontSize: 14 } }, i + 1, "."),
+            h("span", { style: { color: C.text, fontSize: 14 } }, x.text))),
+        list.length === 0 && h("p", { style: { color: C.textFaint, fontSize: 13 }, className: "py-5 text-center" }, "Agreg\xE1 tu primera raz\xF3n.")),
+      h("div", { className: "flex gap-2" },
+        h("input", { value: draft, onChange: (e) => setDraft(e.target.value), onKeyDown: (e) => e.key === "Enter" && add(), placeholder: "Otra raz\xF3n…", style: fieldStyle, className: "flex-1 rounded-xl px-3.5 py-2.5 text-sm outline-none" }),
+        h("button", { type: "button", onClick: add, disabled: !draft.trim(), style: { fontFamily: FONT_BODY, background: draft.trim() ? C.gold : C.border, color: draft.trim() ? C.onAccent : C.textFaint }, className: "rounded-xl px-4 text-sm font-semibold" }, "Agregar")));
+  }
+  function LevelLadder({ level }) {
+    const h = React.createElement;
+    return h("div", { className: "flex flex-col gap-1.5" }, DISCIPLINE_LEVELS.map((lv) => {
+      const on = lv.n === level;
+      const reached = lv.n <= level && level > 0 && lv.n > 0;
+      return h("div", { key: lv.n, className: "flex items-center gap-3 rounded-lg px-3 py-2", style: { background: on ? withAlpha(lv.color, 0.18) : "transparent", border: `1px solid ${on ? withAlpha(lv.color, 0.6) : C.borderSoft}` } },
+        h("span", { style: { fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", color: on || reached ? lv.color : C.textFaint, minWidth: 58 } }, "NIVEL ", lv.n),
+        h("span", { style: { fontSize: 12, color: on ? C.text : reached ? C.textMuted : C.textFaint } }, lv.formula));
+    }));
+  }
+  function SystemsView({ data, onChange, onCreateHabit, habitNames }) {
+    const h = React.createElement;
+    const list = data.sistemas || [];
+    const [openId, setOpenId] = useState(null);
+    const setList = (next) => onChange({ ...data, sistemas: next });
+    const patch = (id, p) => setList(list.map((s) => s.id === id ? { ...s, ...p } : s));
+    const add = () => {
+      const s = { id: uid(), deseo: "", meta: "", estrategia: "", tactica: "", tecnica: "" };
+      setList([...list, s]);
+      setOpenId(s.id);
+    };
+    return h("div", { className: "pb-10" },
+      h("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text }, className: "text-2xl mb-1" }, "Sistemas de disciplina"),
+      h("p", { style: { fontFamily: FONT_BODY, color: C.textFaint }, className: "text-sm mb-4" }, "Salir del estancamiento: complet\xE1 cada paso y sub\xEDs de nivel. En el nivel 5 tu deseo ya tiene una acci\xF3n diaria."),
+      h("div", { className: "rounded-2xl p-4 mb-5", style: cardBox },
+        h("p", { style: { ...LABEL, color: C.textMuted, fontSize: 10 }, className: "mb-3" }, "Los 6 niveles"),
+        h(LevelLadder, { level: -1 })),
+      list.map((s) => {
+        const lv = systemLevel(s);
+        const open = openId === s.id;
+        const info = DISCIPLINE_LEVELS[lv];
+        const hasHabit = s.tecnica && habitNames.includes(s.tecnica.trim().toLowerCase());
+        return h("div", { key: s.id, className: "rounded-2xl p-4 mb-3", style: { ...cardBox, borderColor: withAlpha(info.color, 0.45) } },
+          h("button", { type: "button", onClick: () => setOpenId(open ? null : s.id), className: "w-full text-left flex items-center justify-between gap-3" },
+            h("div", null,
+              h("div", { style: { color: C.text, fontSize: 15, fontWeight: 500 } }, s.deseo || "Sistema nuevo"),
+              h("div", { style: { color: info.color, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em" }, className: "mt-1" }, "NIVEL ", lv, " \xB7 ", lv === 0 ? "REPITO" : info.label.toUpperCase())),
+            h("span", { style: { color: C.textFaint, fontSize: 16 } }, open ? "−" : "+")),
+          h("div", { className: "mt-3" }, h(MiniBar, { pct: lv / 5 * 100 })),
+          open && h("div", { className: "mt-4" },
+            SYSTEM_FIELDS.map(([k, label, ph], i) => h("div", { key: k, className: "mb-3" },
+              h("label", { style: { color: i <= lv ? C.text : C.textFaint, fontSize: 12, fontWeight: 600 }, className: "block mb-1" }, "Nivel ", i + 1, " \xB7 ", label),
+              h("textarea", { rows: 2, value: s[k] || "", onChange: (e) => patch(s.id, { [k]: e.target.value }), placeholder: ph, style: fieldStyle, className: "w-full rounded-xl px-3 py-2 text-sm outline-none resize-none" }))),
+            lv < 5 && h("p", { style: { color: C.textMuted, fontSize: 12 }, className: "mb-3" }, "Pr\xF3ximo paso: complet\xE1 “", SYSTEM_FIELDS[lv][1], "” para llegar al nivel ", lv + 1, "."),
+            h("div", { className: "flex gap-2 flex-wrap" },
+              lv === 5 && !hasHabit && h(SmallBtn, { bg: C.gold, color: C.onAccent, onClick: () => onCreateHabit(s.tecnica.trim()) }, "Convertir la t\xE9cnica en h\xE1bito diario"),
+              hasHabit && h("span", { style: { color: C.sage, fontSize: 12 } }, "✓ La t\xE9cnica ya est\xE1 en tus h\xE1bitos"),
+              h(SmallBtn, { bg: C.danger, color: C.bg, onClick: () => setList(list.filter((x) => x.id !== s.id)) }, "Eliminar sistema"))));
+      }),
+      h("button", { type: "button", onClick: add, style: { fontFamily: FONT_BODY, background: C.gold, color: C.onAccent }, className: "w-full rounded-xl py-3 text-sm font-semibold mt-2" }, "+ Crear sistema"));
+  }
+  function DailyLearnCard({ lesson }) {
+    const h = React.createElement;
+    const [cat, title, text] = lesson;
+    const info = LEARN_CATS[cat];
+    return h("div", { className: "rounded-2xl p-5 mb-4", style: { background: C.card, border: `1px solid ${C.border}` } },
+      h("div", { className: "flex items-center justify-between mb-2" },
+        h("span", { style: { ...LABEL, color: C.textMuted, fontSize: 10 } }, h("span", { style: { color: C.gold } }, "✦"), "\xA0\xA0Aprend\xE9 algo nuevo"),
+        h("span", { style: { fontSize: 10, fontWeight: 600, color: info.color, border: `1px solid ${withAlpha(info.color, 0.5)}`, borderRadius: 99, padding: "2px 8px" } }, info.label)),
+      h("div", { style: { color: C.text, fontSize: 16, fontWeight: 600 }, className: "mb-1.5" }, title),
+      h("p", { style: { color: C.textMuted, fontSize: 13, lineHeight: 1.55 } }, text));
+  }
   var SECTIONS = [
     { id: "hoy", label: "Hoy", views: [["home", "Resumen"], ["inicio", "H\xE1bitos"], ["rutina", "Agenda"], ["ritual", "Ritual"], ["panel", "Panel"]] },
     { id: "cuerpo", label: "Cuerpo", views: [["entreno", "Entreno"], ["nutricion", "Nutrici\xF3n"]] },
-    { id: "metas", label: "Metas", views: [["metas", "Metas"], ["semana", "Semana"], ["rueda", "Rueda"]] },
+    { id: "metas", label: "Metas", views: [["objetivos", "Objetivos"], ["sistemas", "Sistemas"], ["porque", "\xBFPor qu\xE9?"], ["metas", "Metas"], ["semana", "Semana"], ["rueda", "Rueda"]] },
     { id: "finanzas", label: "Finanzas", views: [["finanzas", "Finanzas"]] },
     { id: "notas", label: "Notas", views: [["notas", "Notas"]] }
   ];
@@ -1949,7 +2358,7 @@
   function MiniBar({ pct }) {
     return React.createElement("div", { style: { height: 3, background: C.border, borderRadius: 3, overflow: "hidden", width: "100%" } }, React.createElement("div", { style: { height: "100%", width: `${Math.max(0, Math.min(100, pct))}%`, background: C.gold, borderRadius: 3 } }));
   }
-  function HomeDashboard({ name, greeting, dateLabel, quote, habits, todayLogs, overallPct, agenda, goals, finance, notes, nutrition, monthKeyPrefix, setTab }) {
+  function HomeDashboard({ name, greeting, dateLabel, quote, bookQuote, lesson, disciplina, habits, todayLogs, overallPct, agenda, goals, finance, notes, nutrition, monthKeyPrefix, setTab }) {
     const h = React.createElement;
     const big = { fontSize: 30, fontWeight: 300, letterSpacing: "-0.02em", lineHeight: 1.1 };
     const muted = { color: C.textMuted, fontSize: 13 };
@@ -1974,9 +2383,23 @@
     const r = 46, circ = 2 * Math.PI * r;
     return h("div", { className: "pb-6" },
       h("p", { style: { ...LABEL, color: C.textMuted } }, dateLabel),
-      h("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text, fontWeight: 300, fontSize: "clamp(28px, 5vw, 38px)", letterSpacing: "-0.01em" }, className: "mt-1" }, greeting, ", ", h("strong", { style: { fontWeight: 600 } }, name)),
-      h("p", { className: "mt-3 mb-7", style: { borderLeft: `2px solid ${C.gold}`, paddingLeft: 14, color: C.text, fontWeight: 300, maxWidth: 620 } }, quote),
+      h("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text, fontWeight: 300, fontSize: "clamp(28px, 5vw, 38px)", letterSpacing: "-0.01em" }, className: "mt-1" }, "Hola se\xF1or ", h("strong", { style: { fontWeight: 600, letterSpacing: "0.06em" } }, "BECKER")),
+      h("div", { className: "mt-3 mb-6", style: { borderLeft: `2px solid ${C.gold}`, paddingLeft: 14, maxWidth: 620 } },
+        h("p", { style: { color: C.text, fontWeight: 300, fontSize: 16, lineHeight: 1.45 } }, "“", bookQuote[0], "”"),
+        h("p", { style: { color: C.textMuted, fontSize: 12 }, className: "mt-1.5" }, "— ", bookQuote[1])),
+      h(DailyLearnCard, { lesson }),
       h("div", { className: "grid gap-4 grid-cols-1 md:grid-cols-3" },
+        disciplina && (() => {
+          const wk = periodKey("semanal", /* @__PURE__ */ new Date());
+          const ch = disciplina.checks && disciplina.checks[wk] || {};
+          const tops = (disciplina.semanal || []).filter((x) => !x.parent);
+          const ok = tops.filter((x) => x.target > 1 ? (typeof ch[x.id] === "number" ? ch[x.id] : 0) >= x.target : Boolean(ch[x.id])).length;
+          const pend = tops.filter((x) => !(x.target > 1 ? (typeof ch[x.id] === "number" ? ch[x.id] : 0) >= x.target : Boolean(ch[x.id])));
+          return h(HomeCard, { n: "00", title: "Objetivos de la semana", onClick: () => setTab("objetivos") },
+            h("div", { style: big }, ok, "/", tops.length),
+            h(MiniBar, { pct: tops.length ? ok / tops.length * 100 : 0 }),
+            pend.slice(0, 3).map((x) => h("div", { key: x.id, style: muted }, "\xB7 ", x.text)));
+        })(),
         h(HomeCard, { n: "01", title: "Hoy", onClick: () => setTab("inicio"), wide: true },
           h("div", { className: "flex items-center gap-5 w-full" },
             h("svg", { viewBox: "0 0 104 104", width: 100, height: 100, style: { flex: "none" } },
@@ -2019,6 +2442,7 @@
     const [goals, setGoals] = useState([]);
     const [notes, setNotes] = useState([]);
     const [weekPlan, setWeekPlan] = useState({});
+    const [disciplina, setDisciplina] = useState(DEFAULT_DISCIPLINA);
     const [tab, setTab] = useState(BECKER_INCOMING ? "entreno" : "home");
     const [filter, setFilter] = useState("todas");
     const [sheet, setSheet] = useState(null);
@@ -2031,7 +2455,7 @@
     const [resetConfirm, setResetConfirm] = useState(false);
     useEffect(() => {
       (async () => {
-        const [p, h, l, n, ck, rt, wh, ag, fi, ex, wl, go, nt, wp] = await Promise.all([
+        const [p, h, l, n, ck, rt, wh, ag, fi, ex, wl, go, nt, wp, dc] = await Promise.all([
           getItem("profile", null),
           getItem("habits", []),
           getItem("logs", {}),
@@ -2045,7 +2469,8 @@
           getItem("workoutLogs", {}),
           getItem("goals", []),
           getItem("notes", []),
-          getItem("weekPlan", {})
+          getItem("weekPlan", {}),
+          getItem("disciplina", null)
         ]);
         setProfile(p);
         setHabits(h);
@@ -2061,6 +2486,8 @@
         setGoals(go);
         setNotes(nt);
         setWeekPlan(wp);
+        if (dc) setDisciplina({ ...DEFAULT_DISCIPLINA, ...dc });
+        else setItem("disciplina", DEFAULT_DISCIPLINA);
         setLoading(false);
       })();
     }, []);
@@ -2123,6 +2550,13 @@
     const persistNotes = (next) => {
       setNotes(next);
       setItem("notes", next);
+    };
+    const persistDisciplina = (next) => {
+      setDisciplina(next);
+      setItem("disciplina", next);
+    };
+    const createHabitFromSystem = (name) => {
+      persistHabits([...habits, { id: uid(), name, category: "productividad", timeBlock: "manana", createdAt: fmtDate(/* @__PURE__ */ new Date()) }]);
     };
     const persistWeekPlan = (next) => {
       setWeekPlan(next);
@@ -2264,6 +2698,8 @@
       setSheet(null);
     };
     const quote = QUOTES[dayOfYear(now) % QUOTES.length];
+    const bookQuote = BOOK_QUOTES[(dayOfYear(now) + now.getFullYear()) % BOOK_QUOTES.length];
+    const lesson = LESSONS[(dayOfYear(now) * 7 + now.getFullYear()) % LESSONS.length];
     const greeting = now.getHours() < 12 ? "Buen d\xEDa" : now.getHours() < 19 ? "Buenas tardes" : "Buenas noches";
     const dateLabel = now.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" }).replace(",", " \xB7");
     const existingNames = habits.map((h) => h.name.toLowerCase());
@@ -2438,7 +2874,7 @@
           "Cancelar"
         )))
       )))
-    ), /* @__PURE__ */ React.createElement("main", { className: "flex-1 min-w-0 px-4 sm:px-8 pt-5 pb-32 sm:pb-24 overflow-y-auto" }, /* @__PURE__ */ React.createElement("div", { className: "max-w-5xl mx-auto" }, /* @__PURE__ */ React.createElement(SyncBanner, null), React.createElement(BrandHeader, { tab, setTab, name: profile.name, onAvatar: () => setSidebarOpen(true) }), tab === "home" && React.createElement(HomeDashboard, { name: profile.name, greeting, dateLabel, quote, habits, todayLogs, overallPct, agenda, goals, finance, notes, nutrition, monthKeyPrefix, setTab }), tab === "inicio" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text, fontWeight: 300 }, className: "text-2xl mb-4" }, "H\xE1bitos de hoy"), /* @__PURE__ */ React.createElement(
+    ), /* @__PURE__ */ React.createElement("main", { className: "flex-1 min-w-0 px-4 sm:px-8 pt-5 pb-32 sm:pb-24 overflow-y-auto" }, /* @__PURE__ */ React.createElement("div", { className: "max-w-5xl mx-auto" }, /* @__PURE__ */ React.createElement(SyncBanner, null), React.createElement(BrandHeader, { tab, setTab, name: profile.name, onAvatar: () => setSidebarOpen(true) }), tab === "home" && React.createElement(HomeDashboard, { name: profile.name, greeting, dateLabel, quote, bookQuote, lesson, disciplina, habits, todayLogs, overallPct, agenda, goals, finance, notes, nutrition, monthKeyPrefix, setTab }), tab === "inicio" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text, fontWeight: 300 }, className: "text-2xl mb-4" }, "H\xE1bitos de hoy"), /* @__PURE__ */ React.createElement(
       "div",
       {
         className: "rounded-2xl p-4 mb-5",
@@ -2558,7 +2994,7 @@
         todayKey,
         onToggle: toggleWorkout
       }
-    ), tab === "metas" && /* @__PURE__ */ React.createElement(GoalsView, { goals, onChange: persistGoals }), tab === "rueda" && /* @__PURE__ */ React.createElement(WheelView, { wheel, onChange: persistWheel }), tab === "finanzas" && /* @__PURE__ */ React.createElement(FinanceView, { finance, onChange: persistFinance, monthKeyPrefix }), tab === "notas" && /* @__PURE__ */ React.createElement(NotesView, { notes, onChange: persistNotes }), tab === "semana" && /* @__PURE__ */ React.createElement(WeekPlannerView, { weekPlan, onChange: persistWeekPlan }), tab === "nutricion" && /* @__PURE__ */ React.createElement(NutritionView, { nutrition, onChange: persistNutrition }), tab === "avisos" && /* @__PURE__ */ React.createElement(RemindersView, null), tab === "cuenta" && /* @__PURE__ */ React.createElement(CuentaView, null)))), tab === "inicio" && /* @__PURE__ */ React.createElement(
+    ), tab === "metas" && /* @__PURE__ */ React.createElement(GoalsView, { goals, onChange: persistGoals }), tab === "objetivos" && React.createElement(ObjectivesView, { data: disciplina, onChange: persistDisciplina }), tab === "sistemas" && React.createElement(SystemsView, { data: disciplina, onChange: persistDisciplina, onCreateHabit: createHabitFromSystem, habitNames: existingNames }), tab === "porque" && React.createElement(WhyView, { data: disciplina, onChange: persistDisciplina }), tab === "rueda" && /* @__PURE__ */ React.createElement(WheelView, { wheel, onChange: persistWheel }), tab === "finanzas" && /* @__PURE__ */ React.createElement(FinanceView, { finance, onChange: persistFinance, monthKeyPrefix }), tab === "notas" && /* @__PURE__ */ React.createElement(NotesView, { notes, onChange: persistNotes }), tab === "semana" && /* @__PURE__ */ React.createElement(WeekPlannerView, { weekPlan, onChange: persistWeekPlan }), tab === "nutricion" && /* @__PURE__ */ React.createElement(NutritionView, { nutrition, onChange: persistNutrition }), tab === "avisos" && /* @__PURE__ */ React.createElement(RemindersView, null), tab === "cuenta" && /* @__PURE__ */ React.createElement(CuentaView, null)))), tab === "inicio" && /* @__PURE__ */ React.createElement(
       "button",
       {
         type: "button",
@@ -2598,7 +3034,7 @@ const CONFIG = {
   messagingSenderId: "277639910408",
   appId: "1:277639910408:web:a84fbd7556582d9b4aedbd",
 };
-const KEYS = ["profile", "habits", "logs", "nutrition", "checkins", "ritual", "wheel", "agenda", "finance", "exercises", "workoutLogs", "goals", "notes", "weekPlan", "rumbo.avisos", "rumbo.becker"];
+const KEYS = ["profile", "habits", "logs", "nutrition", "checkins", "ritual", "wheel", "agenda", "finance", "exercises", "workoutLogs", "goals", "notes", "weekPlan", "disciplina", "rumbo.avisos", "rumbo.becker"];
 const estado = { disponible: !!CONFIG, user: null, estado: "apagado", error: "", ultima: 0, hayCambios: false };
 const emitir = () => window.dispatchEvent(new CustomEvent("rumbo-sync", { detail: { ...estado } }));
 let fb = null, refs = null, remotos = {}, unsub = [], timer = null, aplicando = false;
