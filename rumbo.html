@@ -2514,6 +2514,21 @@
     { id: "marca", name: "Marca Personal", color: "#6B9192", icon: "M12 3l2.6 5.6 6 .6-4.5 4 1.3 6-5.4-3.2-5.4 3.2 1.3-6-4.5-4 6-.6z" },
     { id: "finanzas", name: "Finanzas", color: "#C49A6C", icon: "M5 6h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2M3 10h18M16 14h2" }
   ];
+  // Los pilares se pueden agregar, editar y borrar: la lista vive en pilares.pillars y se copia acá.
+  var DEFAULT_PILLARS = PILLARS.map((p) => ({ ...p }));
+  function syncPillars(list) { PILLARS.splice(0, PILLARS.length, ...(list || DEFAULT_PILLARS).filter((p) => !p.deleted)); }
+  var PILLAR_COLORS = ["#8AA3B8", "#A59BBD", "#8FAE9F", "#B98F95", "#B8A27A", "#6B9192", "#C49A6C", "#D9806E", "#7FA9A9", "#9DB37A", "#C7B8E0", "#E0B36B"];
+  var PILLAR_ICONS = [
+    ["Mente", DEFAULT_PILLARS[0].icon], ["Sol", DEFAULT_PILLARS[1].icon], ["Pesa", DEFAULT_PILLARS[2].icon], ["Coraz\xF3n", DEFAULT_PILLARS[3].icon],
+    ["Birrete", DEFAULT_PILLARS[4].icon], ["Estrella", DEFAULT_PILLARS[5].icon], ["Billetera", DEFAULT_PILLARS[6].icon],
+    ["Libro", "M4 5a2 2 0 0 1 2-2h6v17H6a2 2 0 0 0-2 2zM20 5a2 2 0 0 0-2-2h-6v17h6a2 2 0 0 1 2 2z"],
+    ["M\xFAsica", "M9 18V5l11-2v13M9 18a3 3 0 1 1-6 0a3 3 0 0 1 6 0zM20 16a3 3 0 1 1-6 0a3 3 0 0 1 6 0z"],
+    ["Hoja", "M5 19c0-8 6-14 15-14c0 9-6 15-14 15M5 19l7-7"],
+    ["Valija", "M4 8h16v11H4zM9 8V5h6v3M4 13h16"],
+    ["Casa", "M4 11l8-7 8 7v9H4z"],
+    ["Mundo", "M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"],
+    ["Rayo", "M13 2L4 14h7l-1 8 9-12h-7z"]
+  ];
   var PERIODOS = [["diario", "Diario"], ["semanal", "Semanal"], ["mensual", "Mensual"]];
   var pillarById = (id) => PILLARS.find((p) => p.id === id);
   // Notas viejas sin pilar: se clasifican al mostrarlas (sin modificar el dato guardado).
@@ -2536,9 +2551,11 @@
   function classifyPillar(text) {
     const t = " " + (text || "").toLowerCase() + " ";
     let best = null, score = 0;
-    for (const [id, words] of Object.entries(PILLAR_WORDS)) {
-      const s = words.reduce((n, w) => n + (t.includes(w) ? 1 : 0), 0);
-      if (s > score) { best = id; score = s; }
+    // Solo los pilares que existen; los que agregues usan sus propias palabras clave y su nombre.
+    for (const p of PILLARS) {
+      const words = (PILLAR_WORDS[p.id] || []).concat((p.words || []).map((w) => w.toLowerCase()), p.custom ? [p.name.toLowerCase()] : []);
+      const s = words.reduce((n, w) => n + (w && t.includes(w) ? 1 : 0), 0);
+      if (s > score) { best = p.id; score = s; }
     }
     return best;
   }
@@ -2703,7 +2720,7 @@
   var DISCIPLINA_SKIP = ["s02", "s03", "s04", "s09", "s06"]; // ya están como diarios / separados en dos
   var HABIT_PILLAR = { salud: "fisico", mente: "mental", espiritualidad: "espiritual", relaciones: "social", productividad: "marca", finanzas: "finanzas" };
   // Pilar de un hábito viejo: el que se le eligió, o el de su categoría, o por su texto.
-  var habitPillar = (hb) => hb.pillar || HABIT_PILLAR[hb.category] || classifyPillar(hb.name) || "mental";
+  var habitPillar = (hb) => { const id = hb.pillar || HABIT_PILLAR[hb.category] || classifyPillar(hb.name); return pillarById(id) ? id : classifyPillar(hb.name) || (PILLARS[0] || {}).id; };
   var PILLAR_HABIT_CAT = { fisico: "salud", mental: "mente", espiritual: "espiritualidad", social: "relaciones", finanzas: "finanzas" };
   var norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
   // Completa sub-metas y acciones que falten (métodos migrados o de otra versión).
@@ -2767,6 +2784,7 @@
     // Si otro dispositivo cambió "pilares", la app se recarga desde el módulo de sincronización.
     const latest = React.useRef(null);
     latest.current = data;
+    if (data) syncPillars(data.pillars);
     const save = (next) => { latest.current = next; setData(next); setItem("pilares", next); };
     // Migración 2: los hábitos que se habían copiado como objetivos diarios vuelven a ser hábitos
     // (con su pilar y su historial), para que cada pilar tenga su panel de Hábitos sin duplicados.
@@ -2855,6 +2873,23 @@
         });
         if (items.length) save({ ...data, tasks: [...(data.tasks || []), ...items] });
         return items;
+      },
+      // Pilares: agregar o editar (nombre, color, ícono, palabras clave).
+      savePillar(p) {
+        const d = latest.current, list = d.pillars || DEFAULT_PILLARS;
+        const exists = list.some((x) => x.id === p.id);
+        save({ ...d, pillars: exists ? list.map((x) => x.id === p.id ? { ...x, ...p } : x) : [...list, p] });
+      },
+      // Borrar un pilar: sus objetivos, tareas, métodos y hábitos se mueven a otro pilar o se borran.
+      deletePillar(id, target) {
+        const d = latest.current, cx = api.ctx;
+        const list = (d.pillars || DEFAULT_PILLARS).map((x) => x.id === id ? { id, deleted: true } : x);
+        const mv = (arr) => target ? arr.map((x) => x.pillar === id ? { ...x, pillar: target } : x) : arr.filter((x) => x.pillar !== id);
+        save({ ...d, pillars: list, objectives: mv(d.objectives), tasks: mv(d.tasks || []), harada: mv(d.harada) });
+        const habs = cx.habits || [];
+        cx.persistHabits(target ? habs.map((hb) => habitPillar(hb) === id ? { ...hb, pillar: target } : hb) : habs.filter((hb) => habitPillar(hb) !== id));
+        const goals = cx.goals || [];
+        if (goals.some((g) => goalPillar(g) === id)) cx.persistGoals(target ? goals.map((g) => goalPillar(g) === id ? { ...g, pillar: target } : g) : goals.filter((g) => goalPillar(g) !== id));
       },
       // Cursos: progreso, categorías y temas propios (todo en objetos por id, para que la nube los una bien).
       saveCursos(patch) { const d = latest.current; save({ ...d, cursos: { ...(d.cursos || {}), ...patch } }); },
@@ -3079,6 +3114,7 @@
     const h = React.createElement;
     const p = pillarById(pillar);
     const [sub, setSub] = useState("diario");
+    const [editing, setEditing] = useState(false);
     if (!p) return h("p", { style: { color: C.textMuted } }, "Este pilar ya no existe.");
     const habCount = (pil.ctx.habits || []).filter((hb) => habitPillar(hb) === pillar).length;
     const harCount = pil.data.harada.filter((m) => m.pillar === pillar && !m.archived).length;
@@ -3086,7 +3122,9 @@
       h("button", { type: "button", onClick: () => setTab("home"), style: { color: C.textMuted, fontSize: 13, background: "transparent", marginBottom: 10 } }, "← Inicio"),
       h("div", { style: { display: "flex", alignItems: "center", gap: 12, marginBottom: 16 } },
         h("div", { style: { width: 44, height: 44, borderRadius: 14, display: "grid", placeItems: "center", background: withAlpha(p.color, 0.14), border: `1px solid ${withAlpha(p.color, 0.4)}` } }, h(PIcon, { pillar, size: 24 })),
-        h("div", null, h("p", { style: PLabel }, "Pilar"), h("h1", { style: { fontFamily: FONT_DISPLAY, fontWeight: 300, fontSize: 28, color: C.text, lineHeight: 1.1 } }, p.name))),
+        h("div", { style: { flex: 1 } }, h("p", { style: PLabel }, "Pilar"), h("h1", { style: { fontFamily: FONT_DISPLAY, fontWeight: 300, fontSize: 28, color: C.text, lineHeight: 1.1 } }, p.name)),
+        h("button", { type: "button", onClick: () => setEditing(true), style: pBtn({ padding: "6px 10px", fontSize: 12 }) }, "✎ Editar")),
+      editing && h(PillarEditor, { pil, pillar: p, onClose: (deleted) => { setEditing(false); if (deleted === true) setTab("home"); } }),
       h(PSection, { title: "Objetivos", color: p.color },
         h("div", { className: "rb-noscroll", style: { display: "flex", gap: 6, marginBottom: 12, overflowX: "auto" } }, PERIODOS.map(([v, l]) => h("button", {
           key: v, type: "button", onClick: () => setSub(v),
@@ -3097,6 +3135,60 @@
       h(PSection, { title: "M\xE9todos Harada", color: p.color, count: harCount, open: harCount > 0 }, h(HaradaList, { pil, pillar })),
       h(PillarExtras, { pil, pillar }),
       h(PSection, { title: "Progreso e historial", color: p.color, open: false }, h(PillarHistory, { pil, pillar })));
+  }
+  // ── Gestión de pilares: agregar, editar (nombre, color, ícono) y borrar ──────
+  function PillarEditor({ pil, pillar, onClose, onCreated }) {
+    const h = React.createElement;
+    const isNew = !pillar;
+    const [f, setF] = useState(() => pillar ? { ...pillar, words: (pillar.words || []).join(", ") } : { id: "p" + uid(), name: "", color: PILLAR_COLORS[PILLARS.length % PILLAR_COLORS.length], icon: PILLAR_ICONS[7][1], words: "", custom: true });
+    const [del, setDel] = useState(false);
+    const [target, setTarget] = useState("");
+    const set = (p) => setF({ ...f, ...p });
+    const others = PILLARS.filter((x) => x.id !== f.id);
+    const counts = pillar ? {
+      obj: pil.data.objectives.filter((o) => o.pillar === f.id).length, tareas: (pil.data.tasks || []).filter((t) => t.pillar === f.id).length,
+      harada: pil.data.harada.filter((m) => m.pillar === f.id).length, habitos: (pil.ctx.habits || []).filter((hb) => habitPillar(hb) === f.id).length
+    } : null;
+    const save = () => {
+      if (!f.name.trim()) return;
+      const p = { id: f.id, name: f.name.trim(), color: f.color, icon: f.icon, words: f.words.split(",").map((w) => w.trim()).filter(Boolean) };
+      if (f.custom) p.custom = true;
+      pil.savePillar(p);
+      onClose();
+      if (isNew && onCreated) onCreated(p.id);
+    };
+    const doDelete = () => {
+      if (target === "") return alert("Eleg\xED qu\xE9 hacer con lo que tiene este pilar.");
+      const t = target === "__borrar" ? null : target;
+      const msg = t ? `Se mueve todo a ${pillarById(t).name} y se borra el pilar ${f.name}.` : `Se borran el pilar ${f.name} y todo lo que tiene (objetivos, tareas, m\xE9todos y h\xE1bitos). No se puede deshacer.`;
+      if (!confirm(msg + " \xBFSeguimos?")) return;
+      pil.deletePillar(f.id, t);
+      onClose(true);
+    };
+    const lbl = { fontSize: 12, color: C.textMuted, margin: "10px 0 6px" };
+    return h("div", { style: { position: "fixed", inset: 0, zIndex: 60, background: "rgba(5,6,8,0.85)", display: "flex", alignItems: "flex-end", justifyContent: "center" }, onClick: (e) => e.target === e.currentTarget && onClose() },
+      h("div", { style: { ...pCard, width: "100%", maxWidth: 560, borderRadius: "22px 22px 0 0", padding: "18px 16px calc(18px + env(safe-area-inset-bottom))", maxHeight: "92vh", overflowY: "auto" } },
+        h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } }, h("p", { style: PLabel }, isNew ? "Nuevo pilar" : "Editar pilar"), h("button", { type: "button", onClick: () => onClose(), style: { color: C.textMuted, fontSize: 22, background: "transparent" } }, "\xD7")),
+        h("p", { style: lbl }, "Nombre"),
+        h("input", { value: f.name, onChange: (e) => set({ name: e.target.value }), placeholder: "Ej.: Creatividad", style: pInput, autoFocus: isNew }),
+        h("p", { style: lbl }, "Color"),
+        h("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, PILLAR_COLORS.map((c) => h("button", { key: c, type: "button", onClick: () => set({ color: c }), "aria-label": "Color " + c, style: { width: 30, height: 30, borderRadius: 99, background: c, border: f.color === c ? `3px solid ${C.text}` : `1px solid ${C.border}` } }))),
+        h("p", { style: lbl }, "\xCDcono"),
+        h("div", { style: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6 } }, PILLAR_ICONS.map(([n, d]) => h("button", { key: n, type: "button", onClick: () => set({ icon: d }), title: n, "aria-label": "\xCDcono " + n, style: { aspectRatio: "1", borderRadius: 10, display: "grid", placeItems: "center", background: f.icon === d ? withAlpha(f.color, 0.25) : C.card2, border: `1px solid ${f.icon === d ? f.color : C.border}` } },
+          h("svg", { viewBox: "0 0 24 24", width: 20, height: 20, fill: "none", stroke: f.color, strokeWidth: 1.6, strokeLinecap: "round", strokeLinejoin: "round" }, h("path", { d }))))),
+        h("p", { style: lbl }, "Palabras clave (opcional, separadas por coma)"),
+        h("input", { value: f.words, onChange: (e) => set({ words: e.target.value }), placeholder: "Ej.: dibujar, pintar, escribir canciones", style: pInput }),
+        h("p", { style: { fontSize: 11, color: C.textFaint, marginTop: 4 } }, "Rumbo usa estas palabras para mandar solas las tareas a este pilar."),
+        h("button", { type: "button", onClick: save, disabled: !f.name.trim(), style: pBtn({ width: "100%", marginTop: 14, padding: "12px", background: f.name.trim() ? C.gold : C.card2, color: f.name.trim() ? C.onAccent : C.textFaint, border: "none" }) }, isNew ? "Crear pilar" : "Guardar cambios"),
+        !isNew && h("div", { style: { marginTop: 18, borderTop: `1px solid ${C.border}`, paddingTop: 12 } },
+          !del ? h("button", { type: "button", onClick: () => setDel(true), style: pBtn({ color: C.danger }) }, "Eliminar este pilar")
+            : h("div", null,
+              h("p", { style: { fontSize: 13, color: C.text, marginBottom: 6 } }, "Este pilar tiene ", counts.obj, " objetivos, ", counts.tareas, " tareas, ", counts.harada, " m\xE9todos Harada y ", counts.habitos, " h\xE1bitos. \xBFQu\xE9 hago con eso?"),
+              h("select", { value: target, onChange: (e) => setTarget(e.target.value), style: { ...pInput, marginBottom: 8 } },
+                h("option", { value: "" }, "Elegir…"), others.map((x) => h("option", { key: x.id, value: x.id }, "Moverlo todo a " + x.name)), h("option", { value: "__borrar" }, "Borrarlo todo")),
+              h("div", { style: { display: "flex", gap: 8 } },
+                h("button", { type: "button", onClick: doDelete, style: pBtn({ background: C.danger, color: C.bg, border: "none" }) }, "Eliminar pilar"),
+                h("button", { type: "button", onClick: () => setDel(false), style: pBtn() }, "Cancelar"))))));
   }
   // Ritual matutino: uno solo, arriba del Inicio. Cerrado muestra un resumen; abierto, el ritual completo.
   function RitualCard({ pil }) {
@@ -3874,6 +3966,8 @@
     return h("div", null,
       h("button", { type: "button", onClick: onBack, style: { color: C.textMuted, fontSize: 13, background: "transparent", marginBottom: 8 } }, "← M\xE9todos"),
       h("input", { value: m.name, onChange: (e) => save({ ...m, name: e.target.value }), style: { ...pInput, fontSize: 18, marginBottom: 8 } }),
+      h("label", { style: { display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: C.textMuted, marginBottom: 10 } }, "Pilar de este m\xE9todo:",
+        h("select", { value: m.pillar, onChange: (e) => save({ ...m, pillar: e.target.value }), style: { ...pInput, width: "auto", padding: "5px 8px", fontSize: 13 } }, PILLARS.map((x) => h("option", { key: x.id, value: x.id }, x.name)))),
       h("p", { style: { ...PLabel, marginBottom: 4 } }, "Meta central"),
       h("textarea", { value: m.goal, onChange: (e) => save({ ...m, goal: e.target.value }), rows: 2, placeholder: "Ej.: Facturar 500K por mes con mi marca", style: { ...pInput, marginBottom: 12 } }),
       h("div", { style: { display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 3, maxWidth: 520, margin: "0 auto 14px" } }, Array.from({ length: 9 }, (_, b) => block(b))),
@@ -3901,6 +3995,7 @@
   // ── Inicio: Agenda arriba (campo grande + micrófono) y debajo los pilares ────
   function PillarsHome({ pil, name, greeting, dateLabel, setTab }) {
     const h = React.createElement;
+    const [newPillar, setNewPillar] = useState(false);
     const hoy = fmtDate(/* @__PURE__ */ new Date());
     const today = (pil.data.tasks || []).filter((t) => t.kind === "diario" && t.date === hoy).sort((a, b) => Number(a.done) - Number(b.done) || (a.time || "99").localeCompare(b.time || "99"));
     const semana = (pil.data.tasks || []).filter((t) => t.kind === "semanal" && t.pk === pkey("semanal", /* @__PURE__ */ new Date()) && !t.done);
@@ -3923,7 +4018,9 @@
           h("div", { style: { color: C.text, fontSize: 22, fontWeight: 300 } }, done, "/", total),
           h("div", { style: { fontSize: 11, color: C.textMuted } }, total ? "cumplidos hoy" : "nada para hoy"),
           h("div", { style: { height: 3, background: C.border, borderRadius: 3 } }, h("div", { style: { height: "100%", width: pct + "%", background: p.color, borderRadius: 3 } })));
-      })));
+      }), h("button", { key: "nuevo", type: "button", onClick: () => setNewPillar(true), style: { ...pCard, padding: 14, display: "grid", placeItems: "center", gap: 6, color: C.textMuted, borderStyle: "dashed", minHeight: 120 } },
+        h("span", { style: { fontSize: 26, lineHeight: 1 } }, "+"), h("span", { style: { fontSize: 13 } }, "Nuevo pilar"))),
+      newPillar && h(PillarEditor, { pil, onClose: () => setNewPillar(false), onCreated: (id) => setTab("p-" + id) }));
   }
 
   // ── Progreso ─────────────────────────────────────────────────────────────────
@@ -4333,7 +4430,7 @@
     const pil = usePilares({ loading, habits, logs, disciplina, notes, persistNotes, persistHabits, persistLogs, weekPlan });
     // Todo lo de la app que se muestra dentro de los pilares (hábitos, entreno, nutrición, finanzas, ritual…).
     pil.ctx = {
-      habits, logs, todayKey, toggleHabitOnDate, getHabitStreak, deleteHabit,
+      habits, persistHabits, logs, todayKey, toggleHabitOnDate, getHabitStreak, deleteHabit,
       editHabit: (hb) => setSheet({ mode: "edit", initial: hb }),
       newHabit: (pillar) => setSheet({ mode: "create", pillar, category: PILLAR_HABIT_CAT[pillar] }),
       exercises, persistExercises, workoutLogs, toggleWorkout, nutrition, persistNutrition,
