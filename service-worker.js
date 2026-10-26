@@ -1,4 +1,4 @@
-const CACHE_NAME = "rumbo-cache-v14";
+const CACHE_NAME = "rumbo-cache-v12";
 const APP_SHELL = [
   "./rumbo.html",
   "./manifest.json",
@@ -42,6 +42,32 @@ self.addEventListener("fetch", (event) => {
         })
         .catch(() => cached);
       return cached || network;
+    })
+  );
+});
+
+// Notificaciones push (avisos de objetivos pendientes y resumen semanal).
+self.addEventListener("push", (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch (e) { data = { title: "Rumbo", body: event.data && event.data.text() }; }
+  event.waitUntil(
+    self.registration.showNotification(data.title || "Rumbo", {
+      body: data.body || "",
+      tag: data.tag || "rumbo",
+      icon: "icon-192.png",
+      badge: "icon-192.png",
+      data: { url: data.url || "./rumbo.html" },
+    })
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || "./rumbo.html";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const c of list) if ("focus" in c) return c.focus();
+      return self.clients.openWindow(url);
     })
   );
 });
