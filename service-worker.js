@@ -1,4 +1,4 @@
-const CACHE_NAME = "rumbo-cache-v14";
+﻿const CACHE_NAME = "rumbo-cache-v15";
 const APP_SHELL = [
   "./rumbo.html",
   "./manifest.json",
@@ -30,7 +30,7 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
-  // Descargas externas (modelo de voz, Firebase, fuentes): las maneja el navegador, sin pasar por la caché de la app.
+  // Descargas externas (modelo de voz, Firebase, fuentes): las maneja el navegador, sin pasar por la cachÃ© de la app.
   if (!event.request.url.startsWith(self.location.origin)) return;
   event.respondWith(
     caches.match(event.request).then((cached) => {
