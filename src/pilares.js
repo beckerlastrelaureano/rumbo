@@ -442,57 +442,110 @@
   // La primera vez descarga el modelo (~80 MB) y queda guardado en el navegador.
   // Funciona igual en iPhone, Android y PC, aunque el navegador no tenga reconocimiento de voz.
   var WHISPER_LIB = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1";
-  var WHISPER_MODEL = "onnx-community/whisper-base";
+  // Primero el modelo "base" (más preciso); si el dispositivo no puede cargarlo (memoria), el "tiny".
+  var WHISPER_MODELS = ["onnx-community/whisper-base", "onnx-community/whisper-tiny"];
+  var errText = (e) => String(e && (e.message || e.name) || e).slice(0, 160);
   var WhisperWeb = window.RumboWhisper = {
     pipe: null,
     loading: null,
+    model: null,
     listeners: new Set(),
     progress: { status: "idle", pct: 0 },
     emit(p) { this.progress = { ...this.progress, ...p }; this.listeners.forEach((f) => f(this.progress)); },
     load() {
       if (this.pipe) return Promise.resolve(this.pipe);
       if (this.loading) return this.loading;
-      this.emit({ status: "loading", pct: 0 });
-      const files = {};
-      this.loading = import(WHISPER_LIB).then(async ({ pipeline, env }) => {
+      this.emit({ status: "loading", pct: 0, error: "" });
+      this.loading = (async () => {
+        const { pipeline, env } = await import(WHISPER_LIB);
         env.allowLocalModels = false;
-        this.pipe = await pipeline("automatic-speech-recognition", WHISPER_MODEL, {
-          dtype: "q8",
-          device: "wasm",
-          progress_callback: (p) => {
-            if (p.status !== "progress" || !p.total) return;
-            files[p.file] = [p.loaded, p.total];
-            const all = Object.values(files), loaded = all.reduce((a, x) => a + x[0], 0), total = all.reduce((a, x) => a + x[1], 0);
-            this.emit({ pct: Math.round(loaded / total * 100) });
-          }
-        });
-        this.emit({ status: "ready", pct: 100 });
-        return this.pipe;
-      }).catch((e) => { this.loading = null; this.emit({ status: "error", error: String(e && e.message || e) }); throw e; });
+        // Un solo hilo: en iPhone y en GitHub Pages no hay multihilo y a veces se cuelga si se intenta.
+        try { env.backends.onnx.wasm.numThreads = 1; env.backends.onnx.wasm.proxy = false; } catch (e) {}
+        let lastErr;
+        const start = localStorage.getItem("rumbo.whisper.tiny") ? 1 : 0;
+        for (let i = start; i < WHISPER_MODELS.length; i++) {
+          const files = {};
+          try {
+            this.pipe = await pipeline("automatic-speech-recognition", WHISPER_MODELS[i], {
+              dtype: "q8",
+              device: "wasm",
+              progress_callback: (p) => {
+                if (p.status !== "progress" || !p.total) return;
+                files[p.file] = [p.loaded, p.total];
+                const all = Object.values(files), loaded = all.reduce((a, x) => a + x[0], 0), total = all.reduce((a, x) => a + x[1], 0);
+                this.emit({ pct: Math.round(loaded / total * 100) });
+              }
+            });
+            this.model = WHISPER_MODELS[i];
+            if (i > 0) localStorage.setItem("rumbo.whisper.tiny", "1");
+            this.emit({ status: "ready", pct: 100 });
+            return this.pipe;
+          } catch (e) { lastErr = e; console.warn("Whisper", WHISPER_MODELS[i], e); }
+        }
+        throw lastErr;
+      })().catch((e) => { this.loading = null; this.emit({ status: "error", error: errText(e) }); throw e; });
       return this.loading;
     },
-    // Audio grabado (webm, mp4/m4a de iPhone, etc.) → 16 kHz mono, como lo pide Whisper.
-    async decode(blob) {
-      const AC = window.AudioContext || window.webkitAudioContext;
-      const ctx = new AC();
-      const ab = await blob.arrayBuffer();
-      // Callback y no promesa: Safari viejo solo soporta la forma con callbacks.
-      const buf = await new Promise((ok, fail) => ctx.decodeAudioData(ab, ok, fail));
-      if (ctx.close) ctx.close();
-      const off = new OfflineAudioContext(1, Math.max(1, Math.ceil(buf.duration * 16e3)), 16e3);
+    // Lleva cualquier audio a 16 kHz mono, como lo pide Whisper.
+    async resample(samples, rate) {
+      if (rate === 16e3) return samples;
+      const off = new OfflineAudioContext(1, Math.max(1, Math.ceil(samples.length * 16e3 / rate)), 16e3);
+      const buf = off.createBuffer(1, samples.length, rate);
+      buf.getChannelData(0).set(samples);
       const src = off.createBufferSource();
       src.buffer = buf; src.connect(off.destination); src.start();
       return (await off.startRendering()).getChannelData(0);
     },
-    async transcribe(blob) {
+    // Respaldo: decodificar el archivo grabado (webm/mp4) si no hay audio crudo.
+    async decode(blob) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AC();
+      const ab = await blob.arrayBuffer();
+      const buf = await new Promise((ok, fail) => ctx.decodeAudioData(ab, ok, fail));
+      if (ctx.close) ctx.close();
+      return this.resample(buf.getChannelData(0), buf.sampleRate);
+    },
+    // pcm = { samples, rate } capturado directo del micrófono (lo más confiable en iPhone), o blob.
+    async transcribe(input) {
       const pipe = await this.load();
-      const audio = await this.decode(blob);
+      const audio = input.samples ? await this.resample(input.samples, input.rate) : await this.decode(input);
+      if (audio.length < 16e3 * 0.4) return "";
       this.emit({ status: "working" });
       const out = await pipe(audio, { language: "spanish", task: "transcribe", chunk_length_s: 30, stride_length_s: 5 });
       this.emit({ status: "ready" });
       return collapseRepeats((Array.isArray(out) ? out.map((o) => o.text).join(" ") : out.text) || "");
     }
   };
+  // Graba el audio crudo del micrófono (sin pasar por un archivo comprimido).
+  // Audio crudo → archivo WAV (16 bits, mono) para poder volver a escucharlo.
+  function pcmToWav({ samples, rate }) {
+    const step = Math.max(1, Math.floor(rate / 16e3)), n = Math.floor(samples.length / step), sr = Math.round(rate / step);
+    const buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+    const str = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    str(0, "RIFF"); v.setUint32(4, 36 + n * 2, true); str(8, "WAVEfmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); str(36, "data"); v.setUint32(40, n * 2, true);
+    for (let i = 0; i < n; i++) { const x = Math.max(-1, Math.min(1, samples[i * step])); v.setInt16(44 + i * 2, x < 0 ? x * 32768 : x * 32767, true); }
+    return new Blob([buf], { type: "audio/wav" });
+  }
+  // El AudioContext se crea en el toque del usuario (iPhone lo exige) y se pasa acá.
+  function startPcmCapture(stream, ctx) {
+    const src = ctx.createMediaStreamSource(stream);
+    const proc = ctx.createScriptProcessor(4096, 1, 1);
+    const chunks = [];
+    proc.onaudioprocess = (e) => chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+    src.connect(proc); proc.connect(ctx.destination);
+    return {
+      stop() {
+        try { proc.disconnect(); src.disconnect(); } catch (e) {}
+        const len = chunks.reduce((n, c) => n + c.length, 0);
+        const samples = new Float32Array(len);
+        let o = 0; for (const c of chunks) { samples.set(c, o); o += c.length; }
+        const rate = ctx.sampleRate;
+        if (ctx.close) ctx.close();
+        return { samples, rate };
+      }
+    };
+  }
   // Whisper a veces repite la misma frase en loop: la dejamos una sola vez.
   // Además corrige palabras tuyas que el modelo chico suele escuchar mal.
   var VOICE_FIXES = [
@@ -536,29 +589,45 @@
     useEffect(() => { if (IS_IOS || !SR) WhisperWeb.load().catch(() => {}); }, []);
     // Al terminar: si el navegador ya entendió (Android/Chrome/PC), se usa eso, que es más preciso.
     // Si no entendió nada (lo normal en iPhone), Whisper transcribe el audio en el dispositivo.
+    const [stopped, setStopped] = useState(0);
     useEffect(() => {
-      if (!blob || !blob.size) return;
+      if (!stopped) return;
       if (!IS_IOS && ((r.current.finalText || "").trim() || (r.current.liveText || "").trim())) { setAsr("done"); return; }
       let alive = true;
       setAsr("working");
-      WhisperWeb.transcribe(blob).then((t) => {
+      const pcm = r.current.pcmData && r.current.pcmData.samples.length ? r.current.pcmData : null;
+      // El archivo grabado puede tardar un instante en estar listo: se espera solo si hace falta.
+      const fileBlob = () => new Promise((ok) => { let n = 0; const t = setInterval(() => { if (r.current.blob || ++n > 20) { clearInterval(t); ok(r.current.blob || null); } }, 100); });
+      // Primero el audio crudo del micrófono; si falla, se intenta con el archivo grabado.
+      const run = pcm ? WhisperWeb.transcribe(pcm).catch(async (e) => { console.warn("PCM fall\xF3, uso el archivo", e); const b = await fileBlob(); if (!b) throw e; return WhisperWeb.transcribe(b); })
+        : fileBlob().then((b) => { if (!b) throw new Error("No se grab\xF3 audio"); return WhisperWeb.transcribe(b); });
+      run.then((t) => {
         if (!alive) return;
-        setAsr("done");
+        setAsr(t ? "done" : "empty");
         if (t && !r.current.edited) { setText(t); analyze(t); }
-      }).catch(() => alive && setAsr("error"));
+      }).catch((e) => { if (alive) { setAsr("error"); setErr(errText(e)); } });
       return () => { alive = false; };
-    }, [blob]);
+    }, [stopped]);
     const start = async () => {
       setErr(""); setLive(""); setSecs(0); setEdited(false); setAsr("idle"); setBlob(null);
+      const AC = window.AudioContext || window.webkitAudioContext;
+      let ctx = null;
+      try { ctx = new AC(); if (ctx.resume) ctx.resume(); } catch (e) { ctx = null; }
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const mime = ["audio/webm;codecs=opus", "audio/mp4", "audio/webm"].find((m) => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || "";
-        const mr = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 32000 } : void 0);
-        const chunks = [];
-        mr.ondataavailable = (e) => e.data.size && chunks.push(e.data);
-        mr.onstop = () => { stream.getTracks().forEach((t) => t.stop()); setBlob(new Blob(chunks, { type: mr.mimeType || "audio/webm" })); };
-        mr.start();
-        r.current = { mr, finalText: "" };
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 } });
+        r.current = { finalText: "", stream };
+        try { if (ctx) r.current.pcm = startPcmCapture(stream, ctx); } catch (e) { console.warn("PCM", e); }
+        // Archivo de audio para volver a escucharlo (opcional: si el navegador no puede, se arma desde el audio crudo).
+        try {
+          const mime = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"].find((m) => window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) || "";
+          const mr = new MediaRecorder(stream, mime ? { mimeType: mime } : void 0);
+          const chunks = [];
+          mr.ondataavailable = (e) => e.data && e.data.size && chunks.push(e.data);
+          mr.onstop = () => { const b = new Blob(chunks, { type: mr.mimeType || mime || "audio/mp4" }); if (b.size) { r.current.blob = b; setBlob(b); } };
+          mr.start(1000);
+          r.current.mr = mr;
+        } catch (e) { console.warn("MediaRecorder", e); }
+        if (!r.current.pcm && !r.current.mr) throw new Error("Este navegador no permite grabar audio");
         if (SR) {
           const rec = new SR();
           rec.lang = "es-AR"; rec.continuous = true; rec.interimResults = true;
@@ -575,16 +644,22 @@
         r.current.tick = setInterval(() => setSecs((s) => s + 1), 1000);
         setPhase("rec");
       } catch (e) {
-        setErr("No pude usar el micr\xF3fono. Revis\xE1 el permiso del navegador.");
+        if (ctx && ctx.close) ctx.close();
+        setErr("No pude usar el micr\xF3fono. En iPhone: Ajustes → Safari → Micr\xF3fono → Permitir. (" + errText(e) + ")");
       }
     };
     const stop = () => {
       const c = r.current;
-      if (!c.mr) return;
+      if (!c.mr && !c.pcm) return;
       c.recording = false;
       clearInterval(c.tick);
       try { c.rec && c.rec.stop(); } catch (e) {}
-      try { c.mr.state !== "inactive" && c.mr.stop(); } catch (e) {}
+      try { c.pcmData = c.pcm ? c.pcm.stop() : null; } catch (e) { c.pcmData = null; }
+      try { c.mr && c.mr.state !== "inactive" && c.mr.stop(); } catch (e) {}
+      setTimeout(() => { try { c.stream && c.stream.getTracks().forEach((t) => t.stop()); } catch (e) {} }, 300);
+      // Sin archivo del grabador: se guarda el audio crudo como WAV para poder escucharlo.
+      setTimeout(() => { if (!r.current.blob && c.pcmData && c.pcmData.samples.length) { const w = pcmToWav(c.pcmData); r.current.blob = w; setBlob(w); } }, 1200);
+      setStopped((n) => n + 1);
       setTimeout(() => {
         // Mientras Whisper trabaja, se muestra lo que entendió el navegador (si pudo).
         const t = (c.finalText || "").trim() || (c.liveText || "").trim();
@@ -624,7 +699,8 @@
           asr === "working" && h("div", { style: { display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: C.textMuted, ...pCard, padding: "10px 12px", background: withAlpha(C.gold, 0.1) } },
             h("span", { style: { width: 10, height: 10, borderRadius: "50%", background: C.gold, animation: "rbpulse 1s infinite" } }),
             wp.status === "loading" ? `Descargando el reconocimiento de voz: ${wp.pct || 0}% (solo la primera vez)` : "Pasando tu audio a texto…"),
-          asr === "error" && h("p", { style: { fontSize: 12, color: C.danger } }, "No pude transcribir el audio en este dispositivo. Escrib\xED el texto; el audio igual se guarda."),
+          asr === "error" && h("div", { style: { fontSize: 12, color: C.danger } }, "No pude transcribir el audio. Escrib\xED el texto (el audio igual se guarda) o toc\xE1 Regrabar.", err && h("div", { style: { color: C.textFaint, marginTop: 4 } }, "Detalle: ", err)),
+          asr === "empty" && h("p", { style: { fontSize: 12, color: C.textMuted } }, "No se escuch\xF3 voz en el audio. Habl\xE1 m\xE1s cerca del micr\xF3fono y toc\xE1 Regrabar."),
           h("textarea", { value: text, onChange: (e) => { r.current.edited = true; setEdited(true); setText(e.target.value); analyze(e.target.value); }, rows: 4, placeholder: asr === "working" ? "Esper\xE1 un momento…" : "Escrib\xED lo que dijiste…", style: pInput }),
           parts.length > 0 && h("div", null, h("p", { style: { ...PLabel, letterSpacing: "0.18em", marginBottom: 6 } }, parts.length > 1 ? `Se guarda como ${parts.length} notas` : "Se guarda en"),
             parts.map((p, i) => h("div", { key: i, style: { display: "flex", gap: 8, alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${C.borderSoft}` } },
