@@ -2366,7 +2366,7 @@
   }
   var SECTIONS = [
     { id: "inicio", label: "Inicio", views: [["home", "Inicio"]] },
-    { id: "notas", label: "Notas", views: [["notas2", "Notas"]] },
+    { id: "agenda", label: "Agenda", views: [["agenda", "Agenda"]] },
     { id: "progreso", label: "Progreso", views: [["progreso", "Progreso"]] }
   ];
   var sectionOf = (tab) => SECTIONS.find((sec) => sec.views.some(([v]) => v === tab));
@@ -2570,6 +2570,102 @@
     return { period: m[1].toLowerCase(), text: rest ? rest.charAt(0).toUpperCase() + rest.slice(1) : "", target };
   }
 
+  // ── Tareas de la Agenda: entender pilar, tipo (diario/semanal/mensual) y día ──
+  // Ej.: "entrenar piernas mañana" → Físico, diario, mañana.
+  //      "esta semana llamar a la abuela" → Social-Afectivo, semanal.
+  var DIAS_SEMANA = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"];
+  var MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+  // Minúsculas y sin tildes, con el mismo largo que el original (para poder recortar el texto).
+  var flat = (s) => (s || "").normalize("NFC").split("").map((c) => c.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().charAt(0) || c).join("");
+  var addDays = (d, n) => { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() + n); return x; };
+  function parseTask(raw, now) {
+    now = now || /* @__PURE__ */ new Date();
+    let text = (raw || "").trim();
+    let kind = null, date = null, ref = null, time = null;
+    const cut = (re) => {
+      const m = re.exec(flat(text));
+      if (!m) return null;
+      text = (text.slice(0, m.index) + " " + text.slice(m.index + m[0].length)).replace(/\s+/g, " ").trim();
+      return m;
+    };
+    // "mañana" es el día siguiente, salvo "a la mañana" / "por la mañana" (el horario).
+    const cutTomorrow = () => {
+      const f = flat(text), re = /\bmanana\b/g;
+      let x;
+      while ((x = re.exec(f))) {
+        if (f.slice(Math.max(0, x.index - 3), x.index) === "la ") continue;
+        text = (text.slice(0, x.index) + " " + text.slice(x.index + 6)).replace(/\s+/g, " ").trim();
+        return true;
+      }
+      return false;
+    };
+    let m;
+    if (cut(/\b(?:la semana que viene|la (?:pr[o]xima|proxima) semana|(?:la )?semana (?:que viene|proxima))\b/)) { kind = "semanal"; ref = addDays(now, 7); }
+    else if (cut(/\b(?:esta semana|en la semana|durante la semana|antes del domingo)\b/)) { kind = "semanal"; ref = now; }
+    else if (cut(/\b(?:el mes que viene|el proximo mes|el mes proximo)\b/)) { kind = "mensual"; ref = new Date(now.getFullYear(), now.getMonth() + 1, 1); }
+    else if (cut(/\b(?:este mes|en el mes|durante el mes|antes de fin de mes)\b/)) { kind = "mensual"; ref = now; }
+    if (!kind) {
+      if (cut(/\bpasado manana\b/)) date = addDays(now, 2);
+      else if (cut(/\b(?:hoy|esta noche|esta tarde|esta manana)\b/)) date = now;
+      else if (cutTomorrow()) date = addDays(now, 1);
+      else if ((m = cut(/\b(?:el |este |esta |el proximo |el pr[o]ximo )?(lunes|martes|miercoles|jueves|viernes|sabado|domingo)\b/))) {
+        const want = DIAS_SEMANA.indexOf(m[1]);
+        date = addDays(now, (want - weekdayIndex(now) + 7) % 7);
+      } else if ((m = cut(/\b(?:el )?(\d{1,2})\s*(?:\/|-|de\s+)(\d{1,2}|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\b/))) {
+        const mon = /^\d+$/.test(m[2]) ? Number(m[2]) - 1 : (m[2] === "setiembre" ? 8 : MESES.indexOf(m[2]));
+        let d = new Date(now.getFullYear(), mon, Number(m[1]));
+        if (d < addDays(now, -30)) d = new Date(now.getFullYear() + 1, mon, Number(m[1]));
+        if (!isNaN(d)) date = d;
+      }
+    }
+    if ((m = cut(/\b(?:a las|a la)\s+(\d{1,2})(?::(\d{2})|\s*y\s*media)?\s*(?:hs?|horas)?\b|\b(\d{1,2}):(\d{2})\s*(?:hs?)?\b|\b(\d{1,2})\s*hs\b/))) {
+      const hh = Number(m[1] || m[3] || m[5]), mm = m[2] || m[4] || (/media/.test(m[0]) ? "30" : "00");
+      if (hh < 24) time = `${String(hh).padStart(2, "0")}:${mm}`;
+    }
+    // Saca muletillas del principio: "tengo que", "hay que", "y", "también"…
+    text = text.replace(/^(?:y\s+|tambi[eé]n\s+|despu[eé]s\s+|adem[aá]s\s+|luego\s+)+/i, "").replace(/^(?:tengo que|tenemos que|hay que|debo|deber[ií]a|quiero|necesito|me falta|acordarme de|no olvidarme de)\s+/i, "")
+      .replace(/^[,.;:\-\s]+|[,.;:\-\s]+$/g, "").replace(/\s+([,.])/g, "$1");
+    if (!text) text = (raw || "").trim();
+    text = text.charAt(0).toUpperCase() + text.slice(1);
+    if (!kind) kind = "diario";
+    const out = { text, kind, time, explicitDate: Boolean(date || ref) };
+    if (kind === "diario") out.date = fmtDate(date || now);
+    else out.pk = pkey(kind, ref || now);
+    out.pillar = classifyPillar(raw);
+    return out;
+  }
+  // Varias tareas en un mismo texto. En voz se separa también por "y", comas, "después"…
+  // Si una parte no dice día, usa el de la parte anterior ("mañana gym y después la tesis").
+  function splitTasks(raw, voice) {
+    const clean = (raw || "").trim();
+    if (!clean) return [];
+    const pieces = voice ? splitByPillar(clean).map((x) => x.text) : clean.split(/\s*(?:\n|;)\s*/).filter(Boolean);
+    const out = [];
+    for (const piece of pieces) {
+      const t = parseTask(piece);
+      const prev = out[out.length - 1];
+      if (prev && !t.explicitDate) { t.kind = prev.kind; if (prev.date) { t.date = prev.date; delete t.pk; } else { t.pk = prev.pk; delete t.date; } }
+      if (!t.pillar && prev && voice) t.pillar = prev.pillar;
+      out.push(t);
+    }
+    return out;
+  }
+  var KIND_LABEL = { diario: "Diario", semanal: "Semanal", mensual: "Mensual" };
+  function taskWhen(t) {
+    if (t.kind === "diario") {
+      const today = fmtDate(/* @__PURE__ */ new Date()), man = fmtDate(addDays(/* @__PURE__ */ new Date(), 1));
+      const lbl = t.date === today ? "Hoy" : t.date === man ? "Ma\xF1ana" : new Date(t.date + "T12:00").toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "short" });
+      return lbl + (t.time ? " " + t.time : "");
+    }
+    if (t.kind === "semanal") return t.pk === pkey("semanal", /* @__PURE__ */ new Date()) ? "Esta semana" : "Semana del " + new Date(t.pk.slice(1) + "T12:00").toLocaleDateString("es-AR", { day: "numeric", month: "short" });
+    return t.pk === pkey("mensual", /* @__PURE__ */ new Date()) ? "Este mes" : new Date(t.pk + "-15T12:00").toLocaleDateString("es-AR", { month: "long", year: "numeric" });
+  }
+  // Tareas que entran en la lista de objetivos de un pilar para el período actual.
+  function tasksFor(pil, pillar, period, d) {
+    d = d || /* @__PURE__ */ new Date();
+    return (pil.data.tasks || []).filter((t) => t.pillar === pillar && t.kind === period && (period === "diario" ? t.date === fmtDate(d) : t.pk === pkey(period, d)));
+  }
+
   // ── Audios (se guardan en este dispositivo, IndexedDB) ───────────────────────
   var AudioDB = {
     db: null,
@@ -2657,7 +2753,7 @@
   }
 
   // ── Estado de pilares (hook usado por App) ───────────────────────────────────
-  function usePilares({ loading, habits, logs, disciplina, notes, persistNotes, persistHabits, persistLogs }) {
+  function usePilares({ loading, habits, logs, disciplina, notes, persistNotes, persistHabits, persistLogs, weekPlan }) {
     const [data, setData] = useState(null);
     const [recOpen, setRecOpen] = useState(false);
     useEffect(() => {
@@ -2687,6 +2783,27 @@
       }
       const ids = new Set(moved.map((o) => o.id));
       save({ ...data, mig2: true, objectives: data.objectives.filter((o) => !ids.has(o.id)) });
+    }, [data]);
+    // Migración 3: las notas y lo cargado en "Semana" pasan a la Agenda como tareas.
+    // Las notas originales no se borran (siguen guardadas en "notes"); se copian con ids fijos.
+    useEffect(() => {
+      if (!data || !data.mig2 || data.mig3) return;
+      const tasks = [...(data.tasks || [])];
+      const has = new Set(tasks.map((t) => t.id));
+      for (const n of notes || []) {
+        const id = "nota-" + n.id;
+        if (has.has(id)) continue;
+        tasks.push({ id, text: n.text, pillar: notePillar(n), kind: "diario", date: fmtDate(new Date(n.createdAt)), done: false, nota: true, audioId: n.audioId || null, voice: Boolean(n.voice), createdAt: new Date(n.createdAt).getTime() });
+      }
+      const lunes = weekStart(/* @__PURE__ */ new Date());
+      DAYS.forEach((dayName, i) => {
+        for (const t of (weekPlan || {})[dayName] || []) {
+          const id = "sem-" + t.id;
+          if (has.has(id) || !t.text) continue;
+          tasks.push({ id, text: t.text, pillar: classifyPillar(t.text), kind: "diario", date: fmtDate(addDays(lunes, i)), done: Boolean(t.done), createdAt: Date.now() });
+        }
+      });
+      save({ ...data, mig3: true, tasks });
     }, [data]);
     const api = {
       data, recOpen, setRecOpen, notes, persistNotes,
@@ -2723,6 +2840,23 @@
         return list;
       },
       addNote(text, pillar, extra) { return api.addNotes([{ text, pillar, extra }])[0]; },
+      // Tareas de la Agenda (aparecen también en los objetivos del pilar; el tilde es uno solo).
+      addTasks(list) {
+        const at = Date.now();
+        const items = list.filter((t) => t.text && t.text.trim()).map((t, i) => {
+          const x = { id: uid(), text: t.text.trim(), pillar: t.pillar || null, kind: t.kind || "diario", done: false, createdAt: at + i };
+          if (x.kind === "diario") x.date = t.date || fmtDate(/* @__PURE__ */ new Date()); else x.pk = t.pk || pkey(x.kind, /* @__PURE__ */ new Date());
+          if (t.time) x.time = t.time;
+          if (t.audioId) x.audioId = t.audioId;
+          if (t.voice) x.voice = true;
+          return x;
+        });
+        if (items.length) save({ ...data, tasks: [...(data.tasks || []), ...items] });
+        return items;
+      },
+      updateTask(id, patch) { save({ ...data, tasks: (data.tasks || []).map((t) => t.id === id ? { ...t, ...patch } : t) }); },
+      toggleTask(id) { save({ ...data, tasks: (data.tasks || []).map((t) => t.id === id ? { ...t, done: !t.done, doneAt: t.done ? null : Date.now() } : t) }); },
+      deleteTask(id) { const t = (data.tasks || []).find((x) => x.id === id); if (t && t.audioId && !t.nota) AudioDB.del(t.audioId); save({ ...data, tasks: (data.tasks || []).filter((x) => x.id !== id) }); },
       updateNote(id, patch) { persistNotes((notes || []).map((n) => n.id === id ? { ...n, ...patch, updatedAt: (/* @__PURE__ */ new Date()).toISOString() } : n)); },
       deleteNote(id) { const n = (notes || []).find((x) => x.id === id); if (n && n.audioId) AudioDB.del(n.audioId); persistNotes((notes || []).filter((x) => x.id !== id)); }
     };
@@ -2829,13 +2963,16 @@
     const [text, setText] = useState("");
     const [target, setTarget] = useState("");
     const list = listFor(pil, pillar, period);
-    const done = list.filter((x) => x.done).length;
+    const tasks = tasksFor(pil, pillar, period).sort((a, b) => Number(a.done) - Number(b.done));
+    const done = list.filter((x) => x.done).length + tasks.filter((t) => t.done).length;
     const add = () => { if (!text.trim()) return; pil.addObjective(pillar, period, text.trim(), target); setText(""); setTarget(""); };
     const label = period === "diario" ? "hoy" : period === "semanal" ? "esta semana" : "este mes";
     return h("div", null,
-      h("p", { style: { ...PLabel, marginBottom: 6 } }, done, "/", list.length, " cumplidos ", label),
+      h("p", { style: { ...PLabel, marginBottom: 6 } }, done, "/", list.length + tasks.length, " cumplidos ", label),
       h("div", { style: { ...pCard, padding: "4px 14px" } },
-        list.length ? list.map((x) => h(ObjectiveRow, { key: x.o.id + pkey(period, /* @__PURE__ */ new Date()), pil, item: x, period })) : h("p", { style: { color: C.textFaint, fontSize: 14, padding: "14px 0" } }, "Sin objetivos todav\xEDa.")),
+        list.length || tasks.length ? null : h("p", { style: { color: C.textFaint, fontSize: 14, padding: "14px 0" } }, "Sin objetivos todav\xEDa."),
+        list.map((x) => h(ObjectiveRow, { key: x.o.id + pkey(period, /* @__PURE__ */ new Date()), pil, item: x, period })),
+        tasks.map((t) => h(TaskRow, { key: t.id, pil, t, tag: "Agenda" }))),
       h("div", { style: { display: "flex", gap: 8, marginTop: 12 } },
         h("input", { value: text, onChange: (e) => setText(e.target.value), onKeyDown: (e) => e.key === "Enter" && add(), placeholder: "Nuevo objetivo…", style: pInput }),
         h("input", { value: target, onChange: (e) => setTarget(e.target.value.replace(/\D/g, "")), placeholder: "Meta", inputMode: "numeric", title: "Opcional: cantidad (ej. 4 para “4 veces”)", style: { ...pInput, width: 76 } }),
@@ -2950,8 +3087,7 @@
       h(PSection, { title: "H\xE1bitos", color: p.color, count: habCount }, h(PillarHabits, { pil, pillar })),
       h(PSection, { title: "M\xE9todos Harada", color: p.color, count: harCount, open: harCount > 0 }, h(HaradaList, { pil, pillar })),
       h(PillarExtras, { pil, pillar }),
-      h(PSection, { title: "Progreso e historial", color: p.color, open: false }, h(PillarHistory, { pil, pillar })),
-      h(PillarNotes, { pil, pillar }));
+      h(PSection, { title: "Progreso e historial", color: p.color, open: false }, h(PillarHistory, { pil, pillar })));
   }
   // Ritual matutino: uno solo, arriba del Inicio. Cerrado muestra un resumen; abierto, el ritual completo.
   function RitualCard({ pil }) {
@@ -2966,6 +3102,120 @@
         h("div", { style: { flex: 1, minWidth: 0 } }, h("p", { style: PLabel }, "Ritual de hoy"), h("p", { style: { color: C.text, fontSize: 13, marginTop: 2 } }, resumen)),
         h("span", { style: { color: C.textFaint, fontSize: 18 } }, open ? "−" : "+")),
       open && h("div", { style: { marginTop: 10 } }, h(Embed, null, h(RitualView, { ritual: cx.ritual, todayKey: cx.todayKey, onChange: cx.persistRitual, onCompleteSapo: cx.onCompleteSapo }))));
+  }
+  // ── Agenda: tareas con pilar, tipo y día ─────────────────────────────────────
+  var MIC_PATH = "M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3";
+  function MicButton({ onClick, size, label }) {
+    const h = React.createElement;
+    return h("button", { type: "button", onClick, "aria-label": label || "Dictar con el micr\xF3fono", title: label || "Dictar con el micr\xF3fono", style: { width: size || 40, height: size || 40, borderRadius: "50%", background: C.gold, color: C.onAccent, display: "grid", placeItems: "center", flex: "none" } },
+      h("svg", { viewBox: "0 0 24 24", width: 20, height: 20, fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" }, h("path", { d: MIC_PATH })));
+  }
+  function TaskRow({ pil, t, tag, showWhen }) {
+    const h = React.createElement;
+    const [edit, setEdit] = useState(false);
+    const p = pillarById(t.pillar);
+    const color = p ? p.color : C.textFaint;
+    if (edit) return h(TaskEditor, { pil, t, onClose: () => setEdit(false) });
+    return h("div", { style: { display: "flex", alignItems: "center", gap: 10, padding: "10px 2px", borderBottom: `1px solid ${C.borderSoft}` } },
+      h("button", { type: "button", onClick: () => pil.toggleTask(t.id), "aria-label": t.done ? "Desmarcar" : "Marcar hecha", style: { width: 24, height: 24, borderRadius: 7, flex: "none", border: `1.5px solid ${color}`, background: t.done ? color : "transparent", color: C.bg, fontSize: 13, fontWeight: 700, display: "grid", placeItems: "center" } }, t.done ? "✓" : ""),
+      h("button", { type: "button", onClick: () => setEdit(true), style: { flex: 1, minWidth: 0, textAlign: "left", background: "transparent" } },
+        h("div", { style: { color: t.done ? C.textFaint : C.text, fontSize: 15, textDecoration: t.done ? "line-through" : "none", whiteSpace: "pre-wrap", wordBreak: "break-word" } }, t.nota ? "\u{1F4DD} " : "", t.text),
+        h("div", { style: { display: "flex", gap: 6, alignItems: "center", marginTop: 2, fontSize: 11, color: C.textFaint, flexWrap: "wrap" } },
+          h("span", { style: { width: 7, height: 7, borderRadius: 99, background: color } }), p ? p.name : "Sin pilar",
+          showWhen !== false && h("span", null, "\xB7 ", taskWhen(t)), t.kind !== "diario" && showWhen === false && h("span", null, "\xB7 ", KIND_LABEL[t.kind]),
+          t.time && showWhen === false && h("span", null, "\xB7 ", t.time), tag && h("span", { style: { border: `1px solid ${C.border}`, borderRadius: 99, padding: "0 6px" } }, tag), t.audioId && h("span", null, "\u{1F399}"))));
+  }
+  function TaskEditor({ pil, t, onClose }) {
+    const h = React.createElement;
+    const [f, setF] = useState({ ...t });
+    const set = (p) => setF({ ...f, ...p });
+    const now = /* @__PURE__ */ new Date();
+    const setKind = (kind) => kind === "diario" ? set({ kind, date: f.date || fmtDate(now), pk: void 0 }) : set({ kind, pk: pkey(kind, now), date: void 0 });
+    const periodOpts = f.kind === "semanal" ? [[pkey("semanal", now), "Esta semana"], [pkey("semanal", addDays(now, 7)), "La semana que viene"]] : [[pkey("mensual", now), "Este mes"], [pkey("mensual", new Date(now.getFullYear(), now.getMonth() + 1, 1)), "El mes que viene"]];
+    if (f.pk && !periodOpts.some(([v]) => v === f.pk)) periodOpts.unshift([f.pk, taskWhen(f)]);
+    const sel = { ...pInput, padding: "9px 10px", fontSize: 14, width: "auto", flex: 1, minWidth: 0 };
+    return h("div", { style: { ...pCard, padding: 12, margin: "8px 0", display: "grid", gap: 8 } },
+      h("textarea", { value: f.text, onChange: (e) => set({ text: e.target.value }), rows: 2, style: pInput, autoFocus: true }),
+      h("div", { style: { display: "flex", gap: 8 } },
+        h("select", { value: f.pillar || "", onChange: (e) => set({ pillar: e.target.value || null }), style: sel, "aria-label": "Pilar" }, h("option", { value: "" }, "Sin pilar"), PILLARS.map((x) => h("option", { key: x.id, value: x.id }, x.name))),
+        h("select", { value: f.kind, onChange: (e) => setKind(e.target.value), style: sel, "aria-label": "Tipo de objetivo" }, PERIODOS.map(([v, l]) => h("option", { key: v, value: v }, l)))),
+      h("div", { style: { display: "flex", gap: 8 } },
+        f.kind === "diario"
+          ? h(React.Fragment, null,
+            h("input", { type: "date", value: f.date || "", onChange: (e) => set({ date: e.target.value || fmtDate(now) }), style: sel, "aria-label": "D\xEDa" }),
+            h("input", { type: "time", value: f.time || "", onChange: (e) => set({ time: e.target.value || void 0 }), style: { ...sel, flex: "0 0 110px" }, "aria-label": "Hora" }))
+          : h("select", { value: f.pk, onChange: (e) => set({ pk: e.target.value }), style: sel }, periodOpts.map(([v, l]) => h("option", { key: v, value: v }, l)))),
+      t.audioId && h(NoteAudio, { id: t.audioId, onDelete: () => { AudioDB.del(t.audioId); set({ audioId: null }); } }),
+      h("div", { style: { display: "flex", gap: 8 } },
+        h("button", { type: "button", onClick: () => { pil.updateTask(t.id, { ...f, text: f.text.trim() || t.text }); onClose(); }, style: pBtn({ background: C.gold, color: C.onAccent, border: "none" }) }, "Guardar"),
+        h("button", { type: "button", onClick: onClose, style: pBtn() }, "Cancelar"),
+        h("button", { type: "button", onClick: () => { if (confirm("\xBFBorrar esta tarea?")) { pil.deleteTask(t.id); onClose(); } }, style: pBtn({ color: C.danger, marginLeft: "auto" }) }, "Borrar")));
+  }
+  // Campo grande para cargar tareas rápido: pilar opcional + micrófono adentro del campo.
+  function QuickTask({ pil }) {
+    const h = React.createElement;
+    const [text, setText] = useState("");
+    const [pillar, setPillar] = useState("");
+    const [last, setLast] = useState(null);
+    const save = () => {
+      if (!text.trim()) return;
+      const g = detectGoal(text);
+      if (g && g.text) {
+        const gp = pillar || classifyPillar(g.text) || "mental";
+        if (confirm(`\xBFCrear el objetivo ${g.period} “${g.text}” en ${pillarById(gp).name}? (si dec\xEDs que no, queda como tarea)`)) { pil.addObjective(gp, g.period, g.text, g.target); setText(""); setLast([{ text: g.text, pillar: gp, kind: g.period, pk: pkey(g.period === "diario" ? "semanal" : g.period, /* @__PURE__ */ new Date()), objective: true }]); return; }
+      }
+      const items = pil.addTasks(splitTasks(text, false).map((t) => ({ ...t, pillar: pillar || t.pillar })));
+      setLast(items);
+      setText("");
+    };
+    return h("div", null,
+      h("div", { style: { display: "flex", alignItems: "center", gap: 8, background: C.card2, border: `1px solid ${withAlpha(C.gold, 0.45)}`, borderRadius: 16, padding: "6px 6px 6px 14px" } },
+        h("textarea", { value: text, rows: 1, onChange: (e) => setText(e.target.value), onKeyDown: (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); save(); } }, placeholder: "Escrib\xED una tarea…", style: { flex: 1, minWidth: 0, background: "transparent", border: "none", outline: "none", color: C.text, fontFamily: FONT_BODY, fontSize: 16, resize: "none", padding: "10px 0", lineHeight: 1.3 } }),
+        text.trim() ? h("button", { type: "button", onClick: save, "aria-label": "Agregar tarea", style: { width: 40, height: 40, borderRadius: "50%", background: C.gold, color: C.onAccent, fontSize: 20, flex: "none" } }, "✓") : h(MicButton, { onClick: () => pil.setRecOpen(true) })),
+      h("div", { style: { display: "flex", alignItems: "center", gap: 6, marginTop: 8, flexWrap: "wrap" } },
+        h("span", { style: { fontSize: 12, color: C.textFaint } }, "Pilar:"),
+        h("select", { value: pillar, onChange: (e) => setPillar(e.target.value), style: { ...pInput, width: "auto", padding: "5px 8px", fontSize: 13 }, "aria-label": "Pilar de la tarea" }, h("option", { value: "" }, "Autom\xE1tico"), PILLARS.map((x) => h("option", { key: x.id, value: x.id }, x.name))),
+        h("span", { style: { fontSize: 12, color: C.textFaint } }, "\xB7 ej.: “entrenar piernas ma\xF1ana”, “tesis el jueves”, “esta semana llamar a la abuela”")),
+      last && last.length > 0 && h("div", { style: { marginTop: 8, fontSize: 12, color: C.textMuted, display: "grid", gap: 2 } }, last.map((t, i) => {
+        const p = pillarById(t.pillar);
+        return h("div", { key: i }, "✓ ", h("b", { style: { color: C.text, fontWeight: 500 } }, t.text), " → ", p ? p.name : "Sin pilar", " \xB7 ", t.objective ? "objetivo " + t.kind : KIND_LABEL[t.kind] + " \xB7 " + taskWhen(t));
+      })));
+  }
+  function AgendaPage({ pil }) {
+    const h = React.createElement;
+    const [offset, setOffset] = useState(0);
+    const [q, setQ] = useState("");
+    const now = /* @__PURE__ */ new Date();
+    const lunes = addDays(weekStart(now), offset * 7);
+    const tasks = pil.data.tasks || [];
+    const today = fmtDate(now);
+    const sortT = (a, b) => Number(a.done) - Number(b.done) || (a.time || "99").localeCompare(b.time || "99") || a.createdAt - b.createdAt;
+    const wk = pkey("semanal", lunes), mo = pkey("mensual", addDays(lunes, 3));
+    const nq = norm(q);
+    const box = (key, title, list, sub, hl, cap) => h("div", { key, style: { ...pCard, padding: "10px 14px", marginBottom: 10, borderColor: hl ? withAlpha(C.gold, 0.6) : C.border } },
+      h("div", { style: { display: "flex", alignItems: "baseline", gap: 8 } }, h("p", { style: { color: hl ? C.text : C.textMuted, fontSize: 14, fontWeight: 600, textTransform: cap ? "capitalize" : "none" } }, title), sub && h("span", { style: { fontSize: 12, color: C.textFaint } }, sub),
+        list.length > 0 && h("span", { style: { marginLeft: "auto", fontSize: 12, color: C.textFaint } }, list.filter((t) => t.done).length, "/", list.length)),
+      list.length ? list.map((t) => h(TaskRow, { key: t.id, pil, t, showWhen: false })) : h("p", { style: { fontSize: 13, color: C.textFaint, padding: "6px 0" } }, "Sin tareas."));
+    return h("div", { className: "pb-6" },
+      h("h1", { style: { fontFamily: FONT_DISPLAY, fontWeight: 300, fontSize: 28, color: C.text, marginBottom: 12 } }, "Agenda"),
+      h(QuickTask, { pil }),
+      h("input", { value: q, onChange: (e) => setQ(e.target.value), placeholder: "Buscar en tus tareas y notas…", style: { ...pInput, margin: "14px 0", padding: "10px 12px", fontSize: 14 } }),
+      nq ? h("div", null, (() => {
+        const found = tasks.filter((t) => norm(t.text).includes(nq)).sort((a, b) => b.createdAt - a.createdAt);
+        return found.length ? h("div", { style: { ...pCard, padding: "4px 14px" } }, found.map((t) => h(TaskRow, { key: t.id, pil, t }))) : h("p", { style: { color: C.textFaint } }, "No encontr\xE9 nada.");
+      })()) : h(React.Fragment, null,
+        h("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 } },
+          h("button", { type: "button", onClick: () => setOffset(offset - 1), style: pBtn({ padding: "6px 12px" }), "aria-label": "Semana anterior" }, "‹"),
+          h("button", { type: "button", onClick: () => setOffset(0), style: { background: "transparent", color: C.text, fontSize: 14 } }, offset === 0 ? "Esta semana" : "Semana del " + lunes.toLocaleDateString("es-AR", { day: "numeric", month: "short" })),
+          h("button", { type: "button", onClick: () => setOffset(offset + 1), style: pBtn({ padding: "6px 12px" }), "aria-label": "Semana siguiente" }, "›")),
+        Array.from({ length: 7 }, (_, i) => {
+          const d = addDays(lunes, i), k = fmtDate(d);
+          const list = tasks.filter((t) => t.kind === "diario" && t.date === k).sort(sortT);
+          return box(k, d.toLocaleDateString("es-AR", { weekday: "long" }), list, d.toLocaleDateString("es-AR", { day: "numeric", month: "short" }) + (k === today ? " \xB7 hoy" : ""), k === today, true);
+        }),
+        box("sem", "Durante la semana", tasks.filter((t) => t.kind === "semanal" && t.pk === wk).sort(sortT), "sin d\xEDa fijo"),
+        box("mes", "Este mes", tasks.filter((t) => t.kind === "mensual" && t.pk === mo).sort(sortT), addDays(lunes, 3).toLocaleDateString("es-AR", { month: "long" })),
+        h(PSection, { title: "Horario fijo del d\xEDa", open: false }, h(Embed, null, h(AgendaView, { agenda: pil.ctx.agenda, onChange: pil.ctx.persistAgenda })))));
   }
   function PillarNotes({ pil, pillar }) {
     const h = React.createElement;
@@ -3191,7 +3441,7 @@
   }
 
   // ── Grabador de notas de voz ────────────────────────────────────────────────
-  function VoiceRecorder({ pil, onClose }) {
+  function VoiceRecorder({ pil, onClose, mode, onText }) {
     const h = React.createElement;
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const [phase, setPhase] = useState("idle"); // idle | rec | review
@@ -3289,17 +3539,17 @@
         setText(t); analyze(t); setPhase("review");
       }, 300);
     };
-    const analyze = (t) => { setParts(splitByPillar(t)); const g = detectGoal(t); setGoal(g && g.text ? { ...g, pillar: classifyPillar(g.text) || (splitByPillar(t)[0] || {}).pillar || null, create: true } : null); };
+    const analyze = (t) => { if (mode === "text") return; setParts(splitTasks(t, true)); const g = detectGoal(t); setGoal(g && g.text ? { ...g, pillar: classifyPillar(g.text) || (splitTasks(t, true)[0] || {}).pillar || null, create: true } : null); };
     // Mantener apretado = grabar mientras se sostiene; un toque = empezar / terminar.
     const onDown = () => { if (phase !== "idle") return; holdTimer.current = setTimeout(() => (holdTimer.current = "hold"), 450); start(); };
     const onUp = () => { if (holdTimer.current === "hold") { holdTimer.current = null; stop(); } else { clearTimeout(holdTimer.current); holdTimer.current = null; } };
     const onClick = () => { if (phase === "rec" && holdTimer.current === null) stop(); };
-    const saveAll = async () => {
+    const saveAll = async () => { if (mode === "text") { if (text.trim()) onText(text.trim()); return onClose(); }
       const list = parts.filter((p) => p.text.trim());
       if (!list.length && !blob) return onClose();
       let audioId = null;
       if (blob && blob.size) { audioId = uid(); try { await AudioDB.put(audioId, blob); } catch (e) { audioId = null; } }
-      pil.addNotes((list.length ? list : [{ text: "(nota de voz)", pillar: null }]).map((p, i) => ({ text: p.text, pillar: p.pillar, extra: { audioId: i === 0 ? audioId : null, voice: true } })));
+      pil.addTasks((list.length ? list : [{ ...parseTask("(nota de voz)"), pillar: null }]).map((p, i) => ({ ...p, audioId: i === 0 ? audioId : null, voice: true })));
       if (goal && goal.create && goal.pillar && goal.text) pil.addObjective(goal.pillar, goal.period, goal.text, goal.target);
       onClose();
     };
@@ -3307,7 +3557,7 @@
     const mm = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`;
     return h("div", { style: { position: "fixed", inset: 0, zIndex: 60, background: "rgba(5,6,8,0.88)", display: "flex", alignItems: "flex-end", justifyContent: "center" }, onClick: (e) => e.target === e.currentTarget && phase !== "rec" && onClose() },
       h("div", { style: { ...pCard, width: "100%", maxWidth: 560, borderRadius: "22px 22px 0 0", padding: "22px 18px calc(22px + env(safe-area-inset-bottom))", maxHeight: "92vh", overflowY: "auto" } },
-        h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 } }, h("p", { style: PLabel }, "Nota de voz"), phase !== "rec" && h("button", { type: "button", onClick: onClose, style: { color: C.textMuted, fontSize: 22, background: "transparent" } }, "\xD7")),
+        h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 } }, h("p", { style: PLabel }, mode === "text" ? "Dictar" : "Dictar tareas"), phase !== "rec" && h("button", { type: "button", onClick: onClose, style: { color: C.textMuted, fontSize: 22, background: "transparent" } }, "\xD7")),
         phase !== "review" && h("div", { style: { display: "grid", justifyItems: "center", gap: 14, padding: "10px 0 6px" } },
           h("p", { style: { color: C.text, minHeight: 48, textAlign: "center", fontSize: 15 } }, phase === "rec" ? live || (SR ? "Te escucho…" : "Grabando…") : "Toc\xE1 para empezar, o manten\xE9 apretado mientras habl\xE1s."),
           h("button", {
@@ -3325,14 +3575,14 @@
           asr === "error" && h("div", { style: { fontSize: 12, color: C.danger } }, "No pude transcribir el audio. Escrib\xED el texto (el audio igual se guarda) o toc\xE1 Regrabar.", err && h("div", { style: { color: C.textFaint, marginTop: 4 } }, "Detalle: ", err)),
           asr === "empty" && h("p", { style: { fontSize: 12, color: C.textMuted } }, "No se escuch\xF3 voz en el audio. Habl\xE1 m\xE1s cerca del micr\xF3fono y toc\xE1 Regrabar."),
           h("textarea", { value: text, onChange: (e) => { r.current.edited = true; setEdited(true); setText(e.target.value); analyze(e.target.value); }, rows: 4, placeholder: asr === "working" ? "Esper\xE1 un momento…" : "Escrib\xED lo que dijiste…", style: pInput }),
-          parts.length > 0 && h("div", null, h("p", { style: { ...PLabel, letterSpacing: "0.18em", marginBottom: 6 } }, parts.length > 1 ? `Se guarda como ${parts.length} notas` : "Se guarda en"),
+          parts.length > 0 && h("div", null, h("p", { style: { ...PLabel, letterSpacing: "0.18em", marginBottom: 6 } }, parts.length > 1 ? `Se guardan ${parts.length} tareas en la Agenda` : "Se guarda en la Agenda"),
             parts.map((p, i) => h("div", { key: i, style: { display: "flex", gap: 8, alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${C.borderSoft}` } },
               h(PillarChip, { pillar: p.pillar, onChange: (v) => setParts(parts.map((x, k) => k === i ? { ...x, pillar: v } : x)) }),
-              h("span", { style: { color: C.text, fontSize: 14, flex: 1 } }, p.text)))),
+              h("span", { style: { color: C.text, fontSize: 14, flex: 1 } }, p.text, h("span", { style: { display: "block", fontSize: 11, color: C.textFaint } }, KIND_LABEL[p.kind], " \xB7 ", taskWhen(p)))))),
           goal && h("label", { style: { display: "flex", gap: 10, alignItems: "flex-start", ...pCard, padding: 12, background: withAlpha(C.gold, 0.1) } },
             h("input", { type: "checkbox", checked: goal.create, onChange: (e) => setGoal({ ...goal, create: e.target.checked }), style: { marginTop: 3 } }),
             h("span", { style: { fontSize: 14, color: C.text } }, `Crear objetivo ${goal.period}: “${goal.text}”`, goal.target > 1 ? ` (meta ${goal.target})` : "", " en ", h(PillarChip, { pillar: goal.pillar, onChange: (v) => setGoal({ ...goal, pillar: v }) }))),
-          blob && h("p", { style: { fontSize: 12, color: C.textFaint } }, "\u{1F399} El audio queda guardado con la nota (en este dispositivo)."),
+          blob && h("p", { style: { fontSize: 12, color: C.textFaint } }, mode === "text" ? "" : "\u{1F399} El audio queda guardado con la tarea (en este dispositivo)."),
           h("div", { style: { display: "flex", gap: 8 } },
             h("button", { type: "button", onClick: saveAll, disabled: asr === "working" && !text.trim(), style: pBtn({ background: C.gold, color: C.onAccent, border: "none", flex: 1, padding: "12px", opacity: asr === "working" && !text.trim() ? 0.5 : 1 }) }, asr === "working" ? "Guardar (transcribiendo…)" : "Guardar"),
             h("button", { type: "button", onClick: () => { r.current.edited = false; setPhase("idle"); setText(""); setParts([]); setBlob(null); setGoal(null); setAsr("idle"); }, style: pBtn() }, "Regrabar")))));
@@ -3407,30 +3657,39 @@
   }
 
   // ── Inicio: notas arriba + 6 pilares ─────────────────────────────────────────
+  // Progreso del día de un pilar: objetivos diarios + tareas de hoy + hábitos de hoy.
+  function pillarToday(pil, pillar) {
+    const d = pillarDay(pil, pillar);
+    const tk = tasksFor(pil, pillar, "diario");
+    const cx = pil.ctx;
+    const habs = (cx.habits || []).filter((hb) => habitPillar(hb) === pillar);
+    const lg = cx.logs[cx.todayKey] || {};
+    return { done: d.done + tk.filter((t) => t.done).length + habs.filter((hb) => lg[hb.id]).length, total: d.total + tk.length + habs.length };
+  }
+  // ── Inicio: Agenda arriba (campo grande + micrófono) y debajo los pilares ────
   function PillarsHome({ pil, name, greeting, dateLabel, setTab }) {
     const h = React.createElement;
-    const recent = (pil.notes || []).slice(0, 3);
+    const hoy = fmtDate(/* @__PURE__ */ new Date());
+    const today = (pil.data.tasks || []).filter((t) => t.kind === "diario" && t.date === hoy).sort((a, b) => Number(a.done) - Number(b.done) || (a.time || "99").localeCompare(b.time || "99"));
+    const semana = (pil.data.tasks || []).filter((t) => t.kind === "semanal" && t.pk === pkey("semanal", /* @__PURE__ */ new Date()) && !t.done);
     return h("div", { className: "pb-6" },
       h("p", { style: PLabel }, dateLabel),
       h("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text, fontWeight: 300, fontSize: "clamp(24px, 5vw, 34px)", margin: "2px 0 6px" } }, "Hola se\xF1or ", h("strong", { style: { fontWeight: 600, letterSpacing: "0.06em" } }, "BECKER")),
       pil.ctx.bookQuote && h("p", { style: { color: C.textMuted, fontSize: 13, fontWeight: 300, margin: "0 0 16px", borderLeft: `2px solid ${C.gold}`, paddingLeft: 10 } }, "“", pil.ctx.bookQuote[0], "” ", h("span", { style: { color: C.textFaint } }, "— ", pil.ctx.bookQuote[1])),
+      h("section", { style: { ...pCard, padding: 16, marginBottom: 14 } },
+        h("p", { style: { ...PLabel, marginBottom: 12 } }, "Agenda de hoy"),
+        h(QuickTask, { pil }),
+        today.length > 0 && h("div", { style: { marginTop: 10 } }, today.map((t) => h(TaskRow, { key: t.id, pil, t, showWhen: false }))),
+        semana.length > 0 && h("div", { style: { marginTop: 10 } }, h("p", { style: { fontSize: 12, color: C.textFaint, margin: "4px 0" } }, "Pendientes de la semana"), semana.map((t) => h(TaskRow, { key: t.id, pil, t, showWhen: false })))),
       h(RitualCard, { pil }),
-      h("section", { style: { ...pCard, padding: 16, marginBottom: 20 } },
-        h("p", { style: { ...PLabel, marginBottom: 12 } }, "Notas"),
-        h(QuickNote, { pil, big: true }),
-        recent.length > 0 && h("div", { style: { marginTop: 12 } }, recent.map((n) => h("div", { key: n.id, style: { display: "flex", gap: 8, alignItems: "center", padding: "8px 0", borderTop: `1px solid ${C.borderSoft}` } },
-          h(PIcon, { pillar: notePillar(n), size: 16 }), h("span", { style: { color: C.text, fontSize: 14, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, n.text))))),
-      h("p", { style: { ...PLabel, marginBottom: 10 } }, "Pilares"),
+      h("p", { style: { ...PLabel, margin: "6px 0 10px" } }, "Pilares \xB7 progreso de hoy"),
       h("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 12 } }, PILLARS.map((p) => {
-        const d = pillarDay(pil, p.id);
-        const week = listFor(pil, p.id, "semanal");
-        const useWeek = d.total === 0;
-        const done = useWeek ? week.filter((x) => x.done).length : d.done, total = useWeek ? week.length : d.total;
+        const { done, total } = pillarToday(pil, p.id);
         const pct = total ? done / total * 100 : 0;
         return h("button", { key: p.id, type: "button", onClick: () => setTab("p-" + p.id), style: { ...pCard, padding: 14, textAlign: "left", display: "grid", gap: 10, borderColor: withAlpha(p.color, 0.35) } },
           h("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, h(PIcon, { pillar: p.id, size: 22 }), h("span", { style: { color: C.text, fontSize: 14, fontWeight: 500 } }, p.name)),
           h("div", { style: { color: C.text, fontSize: 22, fontWeight: 300 } }, done, "/", total),
-          h("div", { style: { fontSize: 11, color: C.textMuted } }, total ? (useWeek ? "objetivos de la semana" : "objetivos cumplidos hoy") : "sin objetivos"),
+          h("div", { style: { fontSize: 11, color: C.textMuted } }, total ? "cumplidos hoy" : "nada para hoy"),
           h("div", { style: { height: 3, background: C.border, borderRadius: 3 } }, h("div", { style: { height: "100%", width: pct + "%", background: p.color, borderRadius: 3 } })));
       })));
   }
@@ -3550,21 +3809,16 @@
   // ── Barra inferior con micrófono al centro ───────────────────────────────────
   var NAV_ICONS = {
     home: "M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z",
-    notas2: "M6 3h9l3 3v15H6zM9 11h6M9 15h6",
-    progreso: "M4 20V10M10 20V4M16 20v-7M22 20H2",
-    mas: "M5 12h.01M12 12h.01M19 12h.01"
+    agenda: "M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM4 10h16M8 3v4M16 3v4M8 14h3",
+    progreso: "M4 20V10M10 20V4M16 20v-7M22 20H2"
   };
-  function PillarsBottomBar({ tab, setTab, onMic }) {
+  function PillarsBottomBar({ tab, setTab }) {
     const h = React.createElement;
-    const sec = sectionOf(tab);
     const active = (id) => tab === id || (id === "home" && tab.startsWith("p-"));
     const item = (id, label) => h("button", { key: id, type: "button", onClick: () => setTab(id), className: "flex flex-col items-center gap-1", style: { minWidth: 56, color: active(id) ? C.text : C.textFaint, fontFamily: FONT_BODY, fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase", background: "transparent" } },
       h("svg", { viewBox: "0 0 24 24", width: 22, height: 22, fill: "none", stroke: active(id) ? C.gold : "currentColor", strokeWidth: 1.6, strokeLinecap: "round", strokeLinejoin: "round" }, h("path", { d: NAV_ICONS[id] })), label);
     return h("nav", { className: "sm:hidden fixed left-0 right-0 bottom-0 z-30 flex justify-around items-end", style: { background: "rgba(13,14,16,0.95)", backdropFilter: "blur(10px)", borderTop: `1px solid ${C.border}`, padding: "6px 4px calc(8px + env(safe-area-inset-bottom))" } },
-      item("home", "Inicio"), item("notas2", "Notas"),
-      h("button", { type: "button", onClick: onMic, "aria-label": "Nota de voz", style: { width: 58, height: 58, marginTop: -22, borderRadius: "50%", background: C.gold, color: C.onAccent, display: "grid", placeItems: "center", boxShadow: `0 0 0 5px ${C.bg}, 0 6px 18px rgba(0,0,0,.5)` } },
-        h("svg", { viewBox: "0 0 24 24", width: 26, height: 26, fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" }, h("path", { d: "M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3" }))),
-      item("progreso", "Progreso"));
+      item("home", "Inicio"), item("agenda", "Agenda"), item("progreso", "Progreso"));
   }
   // </PILARES>
   function App() {
@@ -3844,7 +4098,7 @@
     const greeting = now.getHours() < 12 ? "Buen d\xEDa" : now.getHours() < 19 ? "Buenas tardes" : "Buenas noches";
     const dateLabel = now.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" }).replace(",", " \xB7");
     const existingNames = habits.map((h) => h.name.toLowerCase());
-    const pil = usePilares({ loading, habits, logs, disciplina, notes, persistNotes, persistHabits, persistLogs });
+    const pil = usePilares({ loading, habits, logs, disciplina, notes, persistNotes, persistHabits, persistLogs, weekPlan });
     // Todo lo de la app que se muestra dentro de los pilares (hábitos, entreno, nutrición, finanzas, ritual…).
     pil.ctx = {
       habits, logs, todayKey, toggleHabitOnDate, getHabitStreak, deleteHabit,
@@ -4027,7 +4281,7 @@
           "Cancelar"
         )))
       )))
-    ), /* @__PURE__ */ React.createElement("main", { className: "flex-1 min-w-0 px-4 sm:px-8 pt-5 pb-32 sm:pb-24 overflow-y-auto" }, /* @__PURE__ */ React.createElement("div", { className: "max-w-5xl mx-auto" }, /* @__PURE__ */ React.createElement(SyncBanner, null), React.createElement(BrandHeader, { tab, setTab, name: profile.name, onAvatar: () => setSidebarOpen(true) }), tab === "home" && pil.data && React.createElement(PillarsHome, { pil, name: profile.name, greeting, dateLabel, setTab }), tab === "notas2" && pil.data && React.createElement(NotesPage, { pil }), tab === "progreso" && pil.data && React.createElement(ProgressPage, { pil, setTab }), tab === "avisos2" && pil.data && React.createElement(NotifySettings, { pil }), tab.startsWith("p-") && pil.data && React.createElement(PillarView, { key: tab, pil, pillar: tab.slice(2), setTab }), tab === "resumen" && React.createElement(HomeDashboard, { name: profile.name, greeting, dateLabel, quote, bookQuote, lesson, disciplina, habits, todayLogs, overallPct, agenda, goals, finance, notes, nutrition, monthKeyPrefix, setTab }), tab === "inicio" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text, fontWeight: 300 }, className: "text-2xl mb-4" }, "H\xE1bitos de hoy"), /* @__PURE__ */ React.createElement(
+    ), /* @__PURE__ */ React.createElement("main", { className: "flex-1 min-w-0 px-4 sm:px-8 pt-5 pb-32 sm:pb-24 overflow-y-auto" }, /* @__PURE__ */ React.createElement("div", { className: "max-w-5xl mx-auto" }, /* @__PURE__ */ React.createElement(SyncBanner, null), React.createElement(BrandHeader, { tab, setTab, name: profile.name, onAvatar: () => setSidebarOpen(true) }), tab === "home" && pil.data && React.createElement(PillarsHome, { pil, name: profile.name, greeting, dateLabel, setTab }), tab === "agenda" && pil.data && React.createElement(AgendaPage, { pil }), tab === "progreso" && pil.data && React.createElement(ProgressPage, { pil, setTab }), tab === "avisos2" && pil.data && React.createElement(NotifySettings, { pil }), tab.startsWith("p-") && pil.data && React.createElement(PillarView, { key: tab, pil, pillar: tab.slice(2), setTab }), tab === "resumen" && React.createElement(HomeDashboard, { name: profile.name, greeting, dateLabel, quote, bookQuote, lesson, disciplina, habits, todayLogs, overallPct, agenda, goals, finance, notes, nutrition, monthKeyPrefix, setTab }), tab === "inicio" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: FONT_DISPLAY, color: C.text, fontWeight: 300 }, className: "text-2xl mb-4" }, "H\xE1bitos de hoy"), /* @__PURE__ */ React.createElement(
       "div",
       {
         className: "rounded-2xl p-4 mb-5",
@@ -4156,7 +4410,7 @@
         className: "fixed bottom-24 sm:bottom-6 right-5 sm:right-6 rounded-full w-14 h-14 flex items-center justify-center shadow-lg z-30"
       },
       /* @__PURE__ */ React.createElement("span", { style: { fontSize: 26, fontWeight: 700, lineHeight: 1 } }, "+")
-    ), React.createElement(PillarsBottomBar, { tab, setTab, onMic: () => pil.setRecOpen(true) }), pil.recOpen && pil.data && React.createElement(VoiceRecorder, { pil, onClose: () => pil.setRecOpen(false) }), sheet && React.createElement(
+    ), React.createElement(PillarsBottomBar, { tab, setTab }), pil.recOpen && pil.data && React.createElement(VoiceRecorder, { pil, mode: pil.recOpen.mode, onText: pil.recOpen.onText, onClose: () => pil.setRecOpen(false) }), sheet && React.createElement(
       HabitSheet,
       {
         initial: sheet.mode === "edit" ? sheet.initial : { timeBlock: sheet.presetBlock, pillar: sheet.pillar, category: sheet.category },
