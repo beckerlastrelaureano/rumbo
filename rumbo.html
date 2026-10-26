@@ -30,6 +30,7 @@
   .mt-10 { margin-top: 2.5rem; } .mb-7 { margin-bottom: 1.75rem; } .mx-auto { margin-left: auto; margin-right: auto; }
   .max-w-5xl { max-width: 64rem; } .justify-around { justify-content: space-around; }
   .bottom-24 { bottom: 6rem; } .right-5 { right: 1.25rem; } .right-0 { right: 0; }
+  @keyframes rbpulse { 50% { opacity: .3; } }
   .rb-noscroll { scrollbar-width: none; } .rb-noscroll::-webkit-scrollbar { display: none; }
   @media (min-width: 640px) {
     .sm\:flex { display: flex; } .sm\:hidden { display: none; } .sm\:bottom-6 { bottom: 1.5rem; } .sm\:pb-24 { padding-bottom: 6rem; }
@@ -2558,8 +2559,10 @@
     const m = /objetivo\s+(diario|semanal|mensual)\s*[:,-]?\s*(.*)$/i.exec(text || "");
     if (!m) return null;
     const rest = (m[2] || "").trim().replace(/[.]+$/, "");
-    const num = /\b(\d{1,3})\s*(veces|d[ií]as|horas|hojas|clases|sesiones)\b/i.exec(rest);
-    return { period: m[1].toLowerCase(), text: rest ? rest.charAt(0).toUpperCase() + rest.slice(1) : "", target: num ? Number(num[1]) : 0 };
+    const WORDS = { un: 1, una: 1, uno: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10, veinte: 20 };
+    const num = /\b(\d{1,3}|un|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|veinte)\s*(veces|d[ií]as|horas|hojas|clases|sesiones)\b/i.exec(rest);
+    const target = num ? Number(num[1]) || WORDS[num[1].toLowerCase()] || 0 : 0;
+    return { period: m[1].toLowerCase(), text: rest ? rest.charAt(0).toUpperCase() + rest.slice(1) : "", target };
   }
 
   // ── Audios (se guardan en este dispositivo, IndexedDB) ───────────────────────
@@ -2932,6 +2935,82 @@
         g.items.map((n) => h(NoteItem, { key: n.id, pil, note: n })))));
   }
 
+  // ── Whisper dentro del celular/compu (gratis, sin servidor) ──────────────────
+  // La primera vez descarga el modelo (~80 MB) y queda guardado en el navegador.
+  // Funciona igual en iPhone, Android y PC, aunque el navegador no tenga reconocimiento de voz.
+  var WHISPER_LIB = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1";
+  var WHISPER_MODEL = "onnx-community/whisper-base";
+  var WhisperWeb = window.RumboWhisper = {
+    pipe: null,
+    loading: null,
+    listeners: new Set(),
+    progress: { status: "idle", pct: 0 },
+    emit(p) { this.progress = { ...this.progress, ...p }; this.listeners.forEach((f) => f(this.progress)); },
+    load() {
+      if (this.pipe) return Promise.resolve(this.pipe);
+      if (this.loading) return this.loading;
+      this.emit({ status: "loading", pct: 0 });
+      const files = {};
+      this.loading = import(WHISPER_LIB).then(async ({ pipeline, env }) => {
+        env.allowLocalModels = false;
+        this.pipe = await pipeline("automatic-speech-recognition", WHISPER_MODEL, {
+          dtype: "q8",
+          device: "wasm",
+          progress_callback: (p) => {
+            if (p.status !== "progress" || !p.total) return;
+            files[p.file] = [p.loaded, p.total];
+            const all = Object.values(files), loaded = all.reduce((a, x) => a + x[0], 0), total = all.reduce((a, x) => a + x[1], 0);
+            this.emit({ pct: Math.round(loaded / total * 100) });
+          }
+        });
+        this.emit({ status: "ready", pct: 100 });
+        return this.pipe;
+      }).catch((e) => { this.loading = null; this.emit({ status: "error", error: String(e && e.message || e) }); throw e; });
+      return this.loading;
+    },
+    // Audio grabado (webm, mp4/m4a de iPhone, etc.) → 16 kHz mono, como lo pide Whisper.
+    async decode(blob) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AC();
+      const ab = await blob.arrayBuffer();
+      // Callback y no promesa: Safari viejo solo soporta la forma con callbacks.
+      const buf = await new Promise((ok, fail) => ctx.decodeAudioData(ab, ok, fail));
+      if (ctx.close) ctx.close();
+      const off = new OfflineAudioContext(1, Math.max(1, Math.ceil(buf.duration * 16e3)), 16e3);
+      const src = off.createBufferSource();
+      src.buffer = buf; src.connect(off.destination); src.start();
+      return (await off.startRendering()).getChannelData(0);
+    },
+    async transcribe(blob) {
+      const pipe = await this.load();
+      const audio = await this.decode(blob);
+      this.emit({ status: "working" });
+      const out = await pipe(audio, { language: "spanish", task: "transcribe", chunk_length_s: 30, stride_length_s: 5 });
+      this.emit({ status: "ready" });
+      return collapseRepeats((Array.isArray(out) ? out.map((o) => o.text).join(" ") : out.text) || "");
+    }
+  };
+  // Whisper a veces repite la misma frase en loop: la dejamos una sola vez.
+  // Además corrige palabras tuyas que el modelo chico suele escuchar mal.
+  var VOICE_FIXES = [
+    [/\bobjetivos? (?:en |e )?(?:manual|semana l|semanales?)\b/gi, "objetivo semanal"], [/\bobjetivos? (?:mens?ual|men sual)\b/gi, "objetivo mensual"], [/\bobjetivos? (?:diarios?|d[ií]a rio)\b/gi, "objetivo diario"],
+    [/\bp[ei]l[aá]t[ie]s\b|\bpelatis\b|\bpilate\b/gi, "pilates"], [/\bla ?tesis\b|\blatesis\b|\bla tesi\b/gi, "la tesis"], [/\bentre no\b/gi, "entreno"],
+    [/\bmaga\b|\bmagga\b|\bmaja\b/gi, "Maga"], [/\byim\b|\bjim\b|\bgim\b/gi, "gym"], [/\bpodcas\b|\bpodkast\b/gi, "podcast"], [/\binstagra\b/gi, "Instagram"]
+  ];
+  function collapseRepeats(text) {
+    let t = text.replace(/\s+/g, " ").trim();
+    for (let n = 1; n <= 20; n++) t = t.replace(new RegExp(`((?:\\S+\\s+){${n - 1}}\\S+?)(?:[\\s,.]+\\1){2,}`, "gi"), "$1");
+    for (const [re, to] of VOICE_FIXES) t = t.replace(re, to);
+    return t.replace(/^\[.*?\]$/, "").trim();
+  }
+  // iPhone/iPad: el reconocimiento del navegador es poco confiable, sobre todo con la app instalada.
+  var IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  function useWhisperProgress() {
+    const [p, setP] = useState(WhisperWeb.progress);
+    useEffect(() => { WhisperWeb.listeners.add(setP); return () => WhisperWeb.listeners.delete(setP); }, []);
+    return p;
+  }
+
   // ── Grabador de notas de voz ────────────────────────────────────────────────
   function VoiceRecorder({ pil, onClose }) {
     const h = React.createElement;
@@ -2944,10 +3023,30 @@
     const [blob, setBlob] = useState(null);
     const [secs, setSecs] = useState(0);
     const [err, setErr] = useState("");
+    const [asr, setAsr] = useState("idle"); // idle | working | done | error
+    const [edited, setEdited] = useState(false);
+    const wp = useWhisperProgress();
     const r = React.useRef({});
     const holdTimer = React.useRef(null);
+    // Precarga Whisper al abrir el grabador: cuando termines de hablar ya está listo.
+    // Solo donde hace falta (iPhone o navegadores sin reconocimiento), para no descargar 80 MB de más.
+    useEffect(() => { if (IS_IOS || !SR) WhisperWeb.load().catch(() => {}); }, []);
+    // Al terminar: si el navegador ya entendió (Android/Chrome/PC), se usa eso, que es más preciso.
+    // Si no entendió nada (lo normal en iPhone), Whisper transcribe el audio en el dispositivo.
+    useEffect(() => {
+      if (!blob || !blob.size) return;
+      if (!IS_IOS && ((r.current.finalText || "").trim() || (r.current.liveText || "").trim())) { setAsr("done"); return; }
+      let alive = true;
+      setAsr("working");
+      WhisperWeb.transcribe(blob).then((t) => {
+        if (!alive) return;
+        setAsr("done");
+        if (t && !r.current.edited) { setText(t); analyze(t); }
+      }).catch(() => alive && setAsr("error"));
+      return () => { alive = false; };
+    }, [blob]);
     const start = async () => {
-      setErr(""); setLive(""); setSecs(0);
+      setErr(""); setLive(""); setSecs(0); setEdited(false); setAsr("idle"); setBlob(null);
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         const mime = ["audio/webm;codecs=opus", "audio/mp4", "audio/webm"].find((m) => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || "";
@@ -2963,7 +3062,7 @@
           rec.onresult = (ev) => {
             let fin = "", tmp = "";
             for (let i = 0; i < ev.results.length; i++) (ev.results[i].isFinal ? (fin += ev.results[i][0].transcript + " ") : (tmp += ev.results[i][0].transcript));
-            r.current.finalText = fin; setLive((fin + tmp).trim());
+            r.current.finalText = fin; r.current.liveText = (fin + tmp).trim(); setLive(r.current.liveText);
           };
           rec.onerror = () => {};
           rec.onend = () => { if (r.current.recording) { try { rec.start(); } catch (e) {} } };
@@ -2984,9 +3083,10 @@
       try { c.rec && c.rec.stop(); } catch (e) {}
       try { c.mr.state !== "inactive" && c.mr.stop(); } catch (e) {}
       setTimeout(() => {
-        const t = (c.finalText || "").trim() || (live || "").trim();
+        // Mientras Whisper trabaja, se muestra lo que entendió el navegador (si pudo).
+        const t = (c.finalText || "").trim() || (c.liveText || "").trim();
         setText(t); analyze(t); setPhase("review");
-      }, 400);
+      }, 300);
     };
     const analyze = (t) => { setParts(splitByPillar(t)); const g = detectGoal(t); setGoal(g && g.text ? { ...g, pillar: classifyPillar(g.text) || (splitByPillar(t)[0] || {}).pillar || null, create: true } : null); };
     // Mantener apretado = grabar mientras se sostiene; un toque = empezar / terminar.
@@ -3014,11 +3114,15 @@
             style: { width: 96, height: 96, borderRadius: "50%", background: phase === "rec" ? C.danger : C.gold, color: "#fff", display: "grid", placeItems: "center", boxShadow: `0 0 0 ${phase === "rec" ? 14 : 8}px ${withAlpha(phase === "rec" ? C.danger : C.gold, 0.2)}`, transition: "all .2s", touchAction: "none" }
           }, h("svg", { viewBox: "0 0 24 24", width: 38, height: 38, fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" }, h("path", { d: phase === "rec" ? "M8 8h8v8H8z" : "M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3" }))),
           h("p", { style: { color: C.textMuted, fontSize: 13 } }, phase === "rec" ? `${mm} \xB7 toc\xE1 para terminar` : ""),
-          !SR && h("p", { style: { color: C.textFaint, fontSize: 12, textAlign: "center" } }, "Este navegador no transcribe solo: el audio se guarda y vas a poder escribir o corregir el texto antes de guardar."),
+          wp.status === "loading" && h("p", { style: { color: C.textFaint, fontSize: 12, textAlign: "center" } }, `Preparando el reconocimiento de voz (solo la primera vez): ${wp.pct || 0}%. Ya pod\xE9s grabar.`),
           err && h("p", { style: { color: C.danger, fontSize: 13 } }, err)),
         phase === "review" && h("div", { style: { display: "grid", gap: 12 } },
           h("p", { style: { ...PLabel, letterSpacing: "0.18em" } }, "Texto (pod\xE9s corregirlo)"),
-          h("textarea", { value: text, onChange: (e) => { setText(e.target.value); analyze(e.target.value); }, rows: 4, placeholder: "Escrib\xED lo que dijiste…", style: pInput }),
+          asr === "working" && h("div", { style: { display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: C.textMuted, ...pCard, padding: "10px 12px", background: withAlpha(C.gold, 0.1) } },
+            h("span", { style: { width: 10, height: 10, borderRadius: "50%", background: C.gold, animation: "rbpulse 1s infinite" } }),
+            wp.status === "loading" ? `Descargando el reconocimiento de voz: ${wp.pct || 0}% (solo la primera vez)` : "Pasando tu audio a texto…"),
+          asr === "error" && h("p", { style: { fontSize: 12, color: C.danger } }, "No pude transcribir el audio en este dispositivo. Escrib\xED el texto; el audio igual se guarda."),
+          h("textarea", { value: text, onChange: (e) => { r.current.edited = true; setEdited(true); setText(e.target.value); analyze(e.target.value); }, rows: 4, placeholder: asr === "working" ? "Esper\xE1 un momento…" : "Escrib\xED lo que dijiste…", style: pInput }),
           parts.length > 0 && h("div", null, h("p", { style: { ...PLabel, letterSpacing: "0.18em", marginBottom: 6 } }, parts.length > 1 ? `Se guarda como ${parts.length} notas` : "Se guarda en"),
             parts.map((p, i) => h("div", { key: i, style: { display: "flex", gap: 8, alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${C.borderSoft}` } },
               h(PillarChip, { pillar: p.pillar, onChange: (v) => setParts(parts.map((x, k) => k === i ? { ...x, pillar: v } : x)) }),
@@ -3028,8 +3132,8 @@
             h("span", { style: { fontSize: 14, color: C.text } }, `Crear objetivo ${goal.period}: “${goal.text}”`, goal.target > 1 ? ` (meta ${goal.target})` : "", " en ", h(PillarChip, { pillar: goal.pillar, onChange: (v) => setGoal({ ...goal, pillar: v }) }))),
           blob && h("p", { style: { fontSize: 12, color: C.textFaint } }, "\u{1F399} El audio queda guardado con la nota (en este dispositivo)."),
           h("div", { style: { display: "flex", gap: 8 } },
-            h("button", { type: "button", onClick: saveAll, style: pBtn({ background: C.gold, color: C.onAccent, border: "none", flex: 1, padding: "12px" }) }, "Guardar"),
-            h("button", { type: "button", onClick: () => { setPhase("idle"); setText(""); setParts([]); setBlob(null); setGoal(null); }, style: pBtn() }, "Regrabar")))));
+            h("button", { type: "button", onClick: saveAll, disabled: asr === "working" && !text.trim(), style: pBtn({ background: C.gold, color: C.onAccent, border: "none", flex: 1, padding: "12px", opacity: asr === "working" && !text.trim() ? 0.5 : 1 }) }, asr === "working" ? "Guardar (transcribiendo…)" : "Guardar"),
+            h("button", { type: "button", onClick: () => { r.current.edited = false; setPhase("idle"); setText(""); setParts([]); setBlob(null); setGoal(null); setAsr("idle"); }, style: pBtn() }, "Regrabar")))));
   }
 
   // ── Métodos Harada ───────────────────────────────────────────────────────────
