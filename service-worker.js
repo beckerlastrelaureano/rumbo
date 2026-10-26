@@ -1,7 +1,8 @@
-const CACHE_NAME = "rumbo-cache-v17";
+const CACHE_NAME = "rumbo-cache-v18";
 const APP_SHELL = [
   "./rumbo.html",
   "./manifest.json",
+  "./cursos.json",
   "./icon-192.png",
   "./icon-512.png",
   "./react.production.min.js",

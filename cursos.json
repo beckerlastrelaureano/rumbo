@@ -1,0 +1,505 @@
+{
+  "version": 1,
+  "lessons": [
+    {
+      "id": "fil-estoicismo",
+      "cat": "filosofia",
+      "title": "Estoicismo: lo que depende de vos",
+      "minutes": 6,
+      "parts": [
+        { "h": "La idea central", "p": "Hace casi 2000 años, el filósofo Epicteto, que había sido esclavo, enseñaba una regla simple: algunas cosas dependen de nosotros y otras no. Dependen de vos tus juicios, tus decisiones y tus acciones. No dependen de vos el clima, lo que piensan los demás, el tráfico o el resultado final de casi todo." },
+        { "h": "Por qué cambia todo", "p": "Gran parte del sufrimiento viene de pelear contra lo que no controlamos. Cuando separás las dos listas, la energía que gastabas en preocuparte pasa a lo que sí podés hacer. No es resignación: es poner el esfuerzo donde tiene efecto." },
+        { "h": "Control del proceso, no del resultado", "p": "No controlás si un cliente te compra, pero sí cuántas propuestas mandás y qué tan buenas son. No controlás la nota del parcial, pero sí las horas de estudio. Los estoicos decían que el arquero controla cómo apunta y suelta la flecha; si el viento la desvía, ya no depende de él." },
+        { "h": "Cómo se practica", "p": "Ante un problema, preguntate: ¿qué parte de esto depende de mí? Escribila. Lo que queda afuera, lo soltás. Marco Aurelio, emperador de Roma, hacía este ejercicio en su diario personal, que hoy conocemos como Meditaciones." }
+      ],
+      "examples": [
+        "Llueve el día que ibas a correr: no depende de vos. Hacer 20 minutos de ejercicio en casa, sí.",
+        "Un cliente no contesta: no controlás su respuesta. Controlás mandar un seguimiento amable en tres días.",
+        "Te preocupa el parcial: no controlás las preguntas. Controlás repasar dos temas por día hasta la fecha."
+      ],
+      "exercise": "Elegí algo que hoy te preocupa. Hacé dos columnas: lo que depende de mí y lo que no. Hacé hoy una acción de la primera columna.",
+      "quiz": [
+        { "q": "Según Epicteto, ¿qué depende de nosotros?", "options": ["Nuestros juicios, decisiones y acciones", "Lo que opinan los demás", "El resultado final de lo que hacemos"], "a": 0 },
+        { "q": "En el ejemplo del arquero, ¿qué controla el arquero?", "options": ["El viento", "Cómo apunta y suelta la flecha", "Si la flecha da en el blanco"], "a": 1 },
+        { "q": "Soltar lo que no depende de vos significa…", "options": ["No hacer nada", "Poner tu energía donde sí tiene efecto", "Dejar de tener metas"], "a": 1 }
+      ],
+      "book": { "title": "Meditaciones", "author": "Marco Aurelio" },
+      "video": { "title": "Epicteto y la dicotomía del control", "query": "Epicteto dicotomía del control estoicismo explicado" }
+    },
+    {
+      "id": "fil-tiempo",
+      "cat": "filosofia",
+      "title": "Séneca y el valor del tiempo",
+      "minutes": 5,
+      "parts": [
+        { "h": "La vida no es corta, la desperdiciamos", "p": "Séneca, filósofo romano del siglo I, escribió Sobre la brevedad de la vida. Su idea: la vida es suficientemente larga si la usamos bien. El problema es que regalamos nuestro tiempo a cualquier cosa, mientras cuidamos mucho más nuestra plata." },
+        { "h": "Memento mori", "p": "Memento mori significa recordá que vas a morir. No es una idea triste: sirve para darle peso a cada día. Si sabés que el tiempo se termina, dejás de postergar lo importante. Es la misma idea de tu razón número 12 para levantarte temprano." },
+        { "h": "El tiempo como inversión", "p": "Cada hora es una inversión. Una hora de guitarra, de lectura o de tesis rinde intereses durante años. Una hora de scroll sin rumbo no deja nada. Séneca recomendaba revisar a la noche en qué se fue el día, como quien revisa sus gastos." },
+        { "h": "Vivir ahora", "p": "Séneca advertía contra vivir siempre esperando el futuro: cuando termine la facultad, cuando tenga plata. El único tiempo que tenés seguro es hoy. Planificar está bien; postergar la vida para después, no." }
+      ],
+      "examples": [
+        "Revisás tu tiempo de pantalla del celular y ves 4 horas por día: son 28 horas por semana, más que un trabajo de medio tiempo.",
+        "En vez de esperar a tener tiempo para la guitarra, tocás 20 minutos después de cenar.",
+        "A la noche anotás en qué se te fue el día, igual que anotás tus gastos."
+      ],
+      "exercise": "Esta noche, antes de dormir, anotá en el journal las 3 cosas en las que más tiempo usaste hoy y si te acercaron a tus objetivos.",
+      "quiz": [
+        { "q": "¿Qué dice Séneca sobre la duración de la vida?", "options": ["Es demasiado corta para todo", "Es suficiente si la usamos bien", "Depende de la suerte"], "a": 1 },
+        { "q": "¿Para qué sirve recordar el memento mori?", "options": ["Para vivir con miedo", "Para darle peso a cada día y no postergar", "Para no hacer planes"], "a": 1 },
+        { "q": "¿Qué recomendaba Séneca hacer a la noche?", "options": ["Revisar en qué se fue el día", "Planificar 10 años", "No pensar en nada"], "a": 0 }
+      ],
+      "book": { "title": "Sobre la brevedad de la vida", "author": "Séneca" },
+      "video": { "title": "Séneca: sobre la brevedad de la vida", "query": "Séneca sobre la brevedad de la vida resumen" }
+    },
+    {
+      "id": "fil-aristoteles",
+      "cat": "filosofia",
+      "title": "Aristóteles: la virtud es un hábito",
+      "minutes": 5,
+      "parts": [
+        { "h": "Somos lo que hacemos", "p": "Aristóteles, en la Ética a Nicómaco, explicó que el carácter se forma con la práctica. Nadie nace valiente o disciplinado: uno se vuelve valiente haciendo actos valientes, y disciplinado haciendo actos disciplinados, una y otra vez." },
+        { "h": "El término medio", "p": "Para Aristóteles, la virtud está en el punto medio entre dos excesos. El coraje está entre la cobardía y la imprudencia. La generosidad, entre la tacañería y el derroche. Entrenar sin descanso es tan malo como no entrenar: el punto medio es constancia con recuperación." },
+        { "h": "La felicidad como actividad", "p": "Aristóteles llamaba eudaimonía a la vida plena. No la veía como un sentimiento pasajero, sino como el resultado de vivir de acuerdo con lo mejor de uno, todos los días. La felicidad, para él, se construye haciendo." },
+        { "h": "Cómo aplicarlo", "p": "Pensá en quién querés ser y qué acciones haría esa persona. Después repetí esas acciones hasta que salgan solas. Cada hábito que tildás en Rumbo es, en términos de Aristóteles, una práctica de virtud." }
+      ],
+      "examples": [
+        "Querés ser puntual: no alcanza con proponértelo, practicás llegar 5 minutos antes a todo durante un mes.",
+        "Entrenás 4 veces por semana y descansás 2: eso es el término medio entre no hacer nada y lastimarte.",
+        "Querés ser buen líder: practicás escuchar antes de opinar en cada reunión."
+      ],
+      "exercise": "Escribí una virtud que quieras tener (por ejemplo, constancia) y una acción chica que la practique. Hacela hoy.",
+      "quiz": [
+        { "q": "Según Aristóteles, ¿cómo se forma el carácter?", "options": ["Se nace con él", "Con la práctica repetida", "Leyendo mucho"], "a": 1 },
+        { "q": "El coraje es el punto medio entre…", "options": ["La cobardía y la imprudencia", "El miedo y la tristeza", "La fuerza y la debilidad"], "a": 0 },
+        { "q": "¿Qué es la eudaimonía?", "options": ["Un sentimiento pasajero", "Una vida plena que se construye haciendo", "Tener mucha plata"], "a": 1 }
+      ],
+      "book": { "title": "Ética a Nicómaco", "author": "Aristóteles" },
+      "video": { "title": "Aristóteles: la virtud y el término medio", "query": "Aristóteles ética a Nicómaco virtud término medio explicado" }
+    },
+    {
+      "id": "fil-sentido",
+      "cat": "filosofia",
+      "title": "Viktor Frankl: encontrar sentido",
+      "minutes": 6,
+      "parts": [
+        { "h": "Quién fue", "p": "Viktor Frankl fue un psiquiatra austríaco que sobrevivió a los campos de concentración nazis. En El hombre en busca de sentido cuenta que quienes tenían un para qué vivir, como reencontrarse con alguien o terminar una obra, resistían mejor el sufrimiento." },
+        { "h": "La última libertad", "p": "Frankl escribió que se le puede quitar todo a una persona menos una cosa: la libertad de elegir su actitud ante las circunstancias. Entre lo que pasa y cómo respondemos hay un espacio, y en ese espacio está nuestra libertad." },
+        { "h": "Tres fuentes de sentido", "p": "Frankl propuso que encontramos sentido en tres lugares: en lo que creamos o hacemos (un trabajo, un proyecto), en lo que vivimos y amamos (personas, experiencias) y en la actitud con la que enfrentamos lo inevitable." },
+        { "h": "Sentido y disciplina", "p": "Cuando tenés un porqué claro, la disciplina pesa menos. Levantarte temprano cuesta, pero si sabés para qué lo hacés, se vuelve elección y no obligación. Tu lista de razones en ¿Por qué madrugar? es justamente eso." }
+      ],
+      "examples": [
+        "Estudiás para el parcial pensando en el profesional que querés ser, no solo en la nota.",
+        "Un día malo en el trabajo: elegís responder con calma en vez de con enojo. Esa es tu libertad.",
+        "Tu marca personal tiene sentido porque querés ayudar a otros a mejorar, no solo facturar."
+      ],
+      "exercise": "Escribí en el journal tu para qué más profundo: ¿para qué querés cumplir tus objetivos de este mes?",
+      "quiz": [
+        { "q": "¿Qué libertad dice Frankl que nadie nos puede quitar?", "options": ["La de movernos", "La de elegir nuestra actitud", "La de tener plata"], "a": 1 },
+        { "q": "¿Cuál NO es una de las tres fuentes de sentido de Frankl?", "options": ["Lo que creamos o hacemos", "Lo que amamos y vivimos", "Lo que otros opinan de nosotros"], "a": 2 },
+        { "q": "¿Por qué un porqué claro ayuda a la disciplina?", "options": ["Porque elimina el esfuerzo", "Porque convierte la obligación en elección", "Porque no hace falta planificar"], "a": 1 }
+      ],
+      "book": { "title": "El hombre en busca de sentido", "author": "Viktor Frankl" },
+      "video": { "title": "Viktor Frankl y el sentido de la vida", "query": "Viktor Frankl el hombre en busca de sentido resumen" }
+    },
+    {
+      "id": "psi-habitos",
+      "cat": "psicologia",
+      "title": "Cómo se forma un hábito",
+      "minutes": 6,
+      "parts": [
+        { "h": "El bucle del hábito", "p": "Charles Duhigg, en El poder de los hábitos, describe tres partes: una señal que dispara la conducta, una rutina que es la conducta en sí y una recompensa que le enseña al cerebro que vale la pena repetirla. James Clear agrega una cuarta: el deseo o anhelo." },
+        { "h": "Por qué cuesta al principio", "p": "Un hábito nuevo requiere decisión consciente, y eso cansa. Con la repetición, el cerebro lo automatiza y deja de pedir esfuerzo. Un estudio de la University College London (Lally y colegas, 2009) encontró que en promedio hizo falta unos 66 días, con mucha variación entre personas y hábitos." },
+        { "h": "Las cuatro leyes", "p": "Según James Clear, para crear un hábito hacelo obvio (señal visible), atractivo (unilo a algo que te guste), fácil (empezá chico) y satisfactorio (que tenga una recompensa inmediata, como tildarlo). Para dejar uno malo, hacé lo contrario: invisible, poco atractivo, difícil e insatisfactorio." },
+        { "h": "Saltear un día no rompe nada", "p": "El mismo estudio mostró que faltar un día no arruina el proceso. Lo que lo arruina es abandonar. La regla práctica: nunca falles dos veces seguidas." }
+      ],
+      "examples": [
+        "Señal: dejás el libro arriba de la almohada. Rutina: leer 20 hojas. Recompensa: tildarlo en Rumbo.",
+        "Querés tocar más la guitarra: la dejás fuera del estuche, a la vista (obvio y fácil).",
+        "Querés usar menos el celu: lo dejás en otro cuarto mientras estudiás (invisible y difícil)."
+      ],
+      "exercise": "Elegí un hábito que te cuesta. Escribí su señal, su rutina y su recompensa, y cambiá una cosa para hacerlo más fácil hoy.",
+      "quiz": [
+        { "q": "¿Cuáles son las tres partes del bucle de Duhigg?", "options": ["Señal, rutina y recompensa", "Meta, plan y acción", "Inicio, medio y fin"], "a": 0 },
+        { "q": "¿Qué pasa si salteás un día de un hábito?", "options": ["Se pierde todo el avance", "No arruina el proceso si volvés al siguiente", "Hay que empezar de cero"], "a": 1 },
+        { "q": "Para dejar un mal hábito conviene hacerlo…", "options": ["Más visible", "Más fácil", "Más difícil e invisible"], "a": 2 }
+      ],
+      "book": { "title": "Hábitos atómicos", "author": "James Clear" },
+      "video": { "title": "Cómo crear hábitos: las 4 leyes", "query": "hábitos atómicos James Clear 4 leyes resumen" }
+    },
+    {
+      "id": "psi-mindset",
+      "cat": "psicologia",
+      "title": "Mentalidad de crecimiento",
+      "minutes": 5,
+      "parts": [
+        { "h": "Dos formas de verte", "p": "La psicóloga Carol Dweck, de la Universidad de Stanford, describió dos mentalidades. En la mentalidad fija creés que tu talento es algo que tenés o no tenés. En la mentalidad de crecimiento creés que tus habilidades se desarrollan con esfuerzo, buenas estrategias y ayuda." },
+        { "h": "Cómo se nota", "p": "Con mentalidad fija evitás los desafíos, te rendís ante los errores y sentís las críticas como un ataque. Con mentalidad de crecimiento buscás desafíos, ves los errores como información y usás las críticas para mejorar." },
+        { "h": "El poder del todavía", "p": "Dweck propone cambiar no puedo por no puedo todavía. Parece una palabra, pero cambia la historia: ya no es un límite, es un punto del camino." },
+        { "h": "Una aclaración importante", "p": "La propia Dweck aclaró que no se trata solo de esforzarse más. Si una estrategia no funciona, hay que cambiarla y pedir ayuda. Esfuerzo sin aprendizaje no es mentalidad de crecimiento." }
+      ],
+      "examples": [
+        "No te sale un acorde de guitarra: en vez de no sirvo para esto, pensás todavía no me sale, voy a practicarlo lento.",
+        "Te bochan en un parcial: revisás qué tipo de preguntas fallaste y cambiás la forma de estudiar.",
+        "Un cliente te dice que no: le preguntás qué le faltó a tu propuesta."
+      ],
+      "exercise": "Escribí una frase de mentalidad fija que te dijiste esta semana y reescribila agregando la palabra todavía.",
+      "quiz": [
+        { "q": "En la mentalidad de crecimiento, las habilidades…", "options": ["Son fijas", "Se desarrollan con esfuerzo y estrategia", "Dependen solo de la genética"], "a": 1 },
+        { "q": "¿Qué palabra propone agregar Dweck?", "options": ["Nunca", "Todavía", "Siempre"], "a": 1 },
+        { "q": "Si una estrategia no funciona, conviene…", "options": ["Esforzarse más con lo mismo", "Cambiarla y pedir ayuda", "Rendirse"], "a": 1 }
+      ],
+      "book": { "title": "Mindset: la actitud del éxito", "author": "Carol Dweck" },
+      "video": { "title": "Carol Dweck: el poder de creer que podés mejorar", "query": "Carol Dweck el poder de creer que puedes mejorar TED" }
+    },
+    {
+      "id": "psi-dopamina",
+      "cat": "psicologia",
+      "title": "Dopamina, celular y motivación",
+      "minutes": 6,
+      "parts": [
+        { "h": "Qué es la dopamina", "p": "La dopamina es un mensajero químico del cerebro muy ligado a la motivación y a la búsqueda de recompensas. No es solo la sustancia del placer: es la que te empuja a buscar algo que tu cerebro espera que sea bueno." },
+        { "h": "El problema de las recompensas fáciles", "p": "Las redes, los videos cortos y las notificaciones dan recompensas rápidas y sin esfuerzo. La psiquiatra Anna Lembke, en Generación dopamina, explica que cuando el cerebro recibe mucho placer fácil, busca equilibrarse, y las actividades lentas, como leer o estudiar, empiezan a parecer aburridas." },
+        { "h": "El balance placer y dolor", "p": "Lembke usa la imagen de una balanza: cada placer intenso inclina la balanza y después el cerebro la compensa hacia el lado del malestar. Por eso, después de horas de celular, muchas veces te sentís peor y no mejor." },
+        { "h": "Cómo recuperar la motivación", "p": "Lembke propone pausas: períodos sin la fuente de placer fácil para que el cerebro se reequilibre. También ayuda hacer cosas que cuestan un poco al principio y dan satisfacción después, como el ejercicio o el agua fría. Tus 3 momentos al día sin celu son exactamente esto." }
+      ],
+      "examples": [
+        "Después de una hora de reels, leer te parece imposible: es la balanza inclinada.",
+        "Dejás el celu en otro cuarto la primera hora del día y notás que te cuesta menos arrancar.",
+        "Entrenar cuesta al principio, pero después te sentís mejor por horas."
+      ],
+      "exercise": "Hoy hacé una pausa de 2 horas seguidas sin redes sociales y anotá en el journal cómo te sentiste al final.",
+      "quiz": [
+        { "q": "La dopamina está muy ligada a…", "options": ["La motivación y la búsqueda de recompensas", "La digestión", "La memoria de largo plazo únicamente"], "a": 0 },
+        { "q": "Según Lembke, después de mucho placer fácil el cerebro…", "options": ["Se queda igual", "Compensa hacia el malestar", "Se vuelve más motivado"], "a": 1 },
+        { "q": "¿Qué propone Lembke para reequilibrar el cerebro?", "options": ["Más notificaciones", "Pausas sin la fuente de placer fácil", "Dormir menos"], "a": 1 }
+      ],
+      "book": { "title": "Generación dopamina", "author": "Anna Lembke" },
+      "video": { "title": "Anna Lembke: dopamina y adicción al celular", "query": "Anna Lembke dopamina explicación español" }
+    },
+    {
+      "id": "psi-sesgos",
+      "cat": "psicologia",
+      "title": "Pensar rápido y pensar despacio",
+      "minutes": 6,
+      "parts": [
+        { "h": "Dos sistemas", "p": "Daniel Kahneman, psicólogo y premio Nobel de Economía, explica que pensamos con dos sistemas. El Sistema 1 es rápido, automático e intuitivo. El Sistema 2 es lento, consciente y cuesta esfuerzo. Casi todo el día usamos el 1, y está bien, pero comete errores previsibles." },
+        { "h": "Sesgo de confirmación", "p": "Tendemos a buscar y recordar la información que confirma lo que ya creemos, e ignorar la que lo contradice. Si pensás que no sos bueno para vender, vas a recordar cada no y olvidar cada sí." },
+        { "h": "Aversión a la pérdida", "p": "Kahneman y Tversky mostraron que perder duele, en general, más que lo que alegra ganar lo mismo. Por eso a veces no arriesgamos aunque nos convenga, o seguimos en algo que no funciona para no sentir que perdimos lo invertido." },
+        { "h": "Cómo defenderte", "p": "No podés apagar el Sistema 1, pero podés frenar en decisiones importantes. Preguntate: ¿qué evidencia tengo en contra?, ¿qué haría si empezara de cero hoy? Escribir la decisión obliga a usar el Sistema 2." }
+      ],
+      "examples": [
+        "Leés solo opiniones que coinciden con la tuya sobre una inversión: sesgo de confirmación.",
+        "Seguís pagando una suscripción que no usás porque ya pagaste muchos meses.",
+        "Antes de una compra grande, la escribís y esperás 48 horas."
+      ],
+      "exercise": "Pensá una decisión que tengas pendiente. Escribí dos argumentos a favor y dos en contra antes de decidir.",
+      "quiz": [
+        { "q": "El Sistema 1 es…", "options": ["Lento y consciente", "Rápido y automático", "Solo para matemática"], "a": 1 },
+        { "q": "El sesgo de confirmación es…", "options": ["Buscar lo que confirma lo que ya creemos", "Confirmar todo dos veces", "Dudar de todo"], "a": 0 },
+        { "q": "Según la aversión a la pérdida…", "options": ["Ganar alegra más que perder", "Perder duele más que lo que alegra ganar lo mismo", "No hay diferencia"], "a": 1 }
+      ],
+      "book": { "title": "Pensar rápido, pensar despacio", "author": "Daniel Kahneman" },
+      "video": { "title": "Kahneman: Sistema 1 y Sistema 2", "query": "Kahneman pensar rápido pensar despacio sistema 1 sistema 2 resumen" }
+    },
+    {
+      "id": "com-escucha",
+      "cat": "comunicacion",
+      "title": "Escucha activa",
+      "minutes": 5,
+      "parts": [
+        { "h": "Escuchar no es esperar tu turno", "p": "La mayoría de las personas escucha para responder, no para entender. Mientras el otro habla, ya estamos armando nuestra respuesta. La escucha activa, idea popularizada por el psicólogo Carl Rogers, propone concentrarse de verdad en lo que el otro dice y siente." },
+        { "h": "Las tres herramientas", "p": "Primero, atención total: sin celu, mirando a la persona. Segundo, parafrasear: repetir con tus palabras lo que entendiste. Tercero, preguntar para profundizar: ¿cómo fue eso?, ¿qué te preocupa más?" },
+        { "h": "Validar no es dar la razón", "p": "Validar es reconocer lo que el otro siente, aunque no estés de acuerdo: entiendo que eso te molestó. Las personas se abren cuando se sienten entendidas, y recién ahí escuchan tus ideas." },
+        { "h": "Escuchar para vender y liderar", "p": "En una venta, quien hace buenas preguntas descubre el problema real del cliente. En un equipo, el líder que escucha se entera antes de los problemas. Escuchar es la herramienta de comunicación más subestimada." }
+      ],
+      "examples": [
+        "Maga te cuenta un mal día: en vez de dar consejos, decís o sea que te sentiste sola con todo eso.",
+        "Un cliente dice que tu precio es alto: preguntás ¿alto comparado con qué? antes de bajar el precio.",
+        "En una charla, dejás el celu boca abajo y mirás a la persona."
+      ],
+      "exercise": "Hoy, en una conversación, antes de opinar, parafraseá lo que te dijeron y preguntá ¿entendí bien?",
+      "quiz": [
+        { "q": "Parafrasear es…", "options": ["Cambiar de tema", "Repetir con tus palabras lo que entendiste", "Dar un consejo"], "a": 1 },
+        { "q": "Validar significa…", "options": ["Darle la razón al otro siempre", "Reconocer lo que el otro siente", "Corregir al otro"], "a": 1 },
+        { "q": "¿Quién popularizó la escucha activa?", "options": ["Carl Rogers", "Sigmund Freud", "Aristóteles"], "a": 0 }
+      ],
+      "book": { "title": "El arte de escuchar", "author": "Erich Fromm" },
+      "video": { "title": "Escucha activa: técnicas prácticas", "query": "escucha activa técnicas parafrasear validar" }
+    },
+    {
+      "id": "com-cnv",
+      "cat": "comunicacion",
+      "title": "Comunicación no violenta",
+      "minutes": 6,
+      "parts": [
+        { "h": "Qué es", "p": "Marshall Rosenberg, psicólogo estadounidense, creó la Comunicación No Violenta: una forma de hablar de lo que te pasa sin atacar y de escuchar sin ponerte a la defensiva. Es muy útil en pareja, en familia y en el trabajo." },
+        { "h": "Los cuatro pasos", "p": "Uno, observación: describí el hecho sin juzgar (llegaste a las 21 y quedamos a las 20). Dos, sentimiento: decí qué sentiste (me sentí frustrado). Tres, necesidad: explicá qué necesitás (necesito poder contar con los horarios). Cuatro, pedido: pedí algo concreto (¿me avisás si te vas a atrasar?)." },
+        { "h": "Juicio contra observación", "p": "Siempre llegás tarde es un juicio y provoca defensa. Hoy llegaste una hora después de lo que quedamos es una observación y abre la conversación. Las palabras siempre y nunca casi siempre empeoran las discusiones." },
+        { "h": "Pedido contra exigencia", "p": "Un pedido acepta un no; una exigencia, no. Si la otra persona siente que no tiene opción, se resiste aunque el pedido sea razonable." }
+      ],
+      "examples": [
+        "En vez de nunca me escuchás, decís: hoy te conté algo y miraste el celu; me sentí ignorado; ¿podemos hablar sin pantallas un rato?",
+        "Con un compañero de grupo: el trabajo vence el viernes y faltan tus partes; estoy preocupado; ¿podés mandarlas el jueves?",
+        "Con vos mismo: hoy no entrené; me siento frustrado; necesito constancia; mañana voy a las 7."
+      ],
+      "exercise": "Pensá un conflicto chico que tengas. Escribí los 4 pasos: observación, sentimiento, necesidad y pedido.",
+      "quiz": [
+        { "q": "¿Cuál es el primer paso de la CNV?", "options": ["Pedido", "Observación sin juicio", "Necesidad"], "a": 1 },
+        { "q": "Siempre llegás tarde es…", "options": ["Una observación", "Un juicio", "Un pedido"], "a": 1 },
+        { "q": "La diferencia entre pedido y exigencia es que el pedido…", "options": ["Acepta un no", "Es más corto", "Se hace por escrito"], "a": 0 }
+      ],
+      "book": { "title": "Comunicación no violenta", "author": "Marshall B. Rosenberg" },
+      "video": { "title": "Marshall Rosenberg: comunicación no violenta", "query": "Marshall Rosenberg comunicación no violenta 4 pasos" }
+    },
+    {
+      "id": "com-historias",
+      "cat": "comunicacion",
+      "title": "Contar historias que enganchan",
+      "minutes": 5,
+      "parts": [
+        { "h": "Por qué funcionan las historias", "p": "Las personas recuerdan historias mucho más que datos sueltos. Una historia tiene un personaje, un problema y un cambio, y eso hace que el que escucha se ponga en el lugar del otro." },
+        { "h": "Una estructura simple", "p": "Usá tres partes: situación (cómo estaba todo), conflicto (qué problema apareció) y resolución (qué cambió y qué aprendiste). Para contenido de marca personal, terminá con una enseñanza o una invitación." },
+        { "h": "El gancho", "p": "En redes y podcasts, los primeros segundos deciden si te siguen. Empezá por el momento más intenso de la historia o por una pregunta: hace un año no podía entrenar ni dos días seguidos." },
+        { "h": "Detalles concretos", "p": "Un detalle concreto vale más que diez adjetivos. Estaba nervioso es débil; me temblaba la mano con el micrófono es una imagen. Mostrá, no expliques." }
+      ],
+      "examples": [
+        "Para un reel: hace 6 meses no leía ni un libro por año; hoy leo 20 hojas por día; esto cambió.",
+        "En una reunión con un cliente: le contás el caso de otro cliente con el mismo problema y cómo lo resolviste.",
+        "En el podcast arrancás con la pregunta: ¿alguna vez te levantaste sin ganas de nada?"
+      ],
+      "exercise": "Escribí una historia tuya de menos de 100 palabras con situación, conflicto y resolución. Puede ser idea para un posteo.",
+      "quiz": [
+        { "q": "¿Cuáles son las tres partes de la estructura propuesta?", "options": ["Situación, conflicto y resolución", "Saludo, datos y despedida", "Pregunta, respuesta y precio"], "a": 0 },
+        { "q": "El gancho debería ir…", "options": ["Al final", "En los primeros segundos", "En la descripción"], "a": 1 },
+        { "q": "¿Qué funciona mejor?", "options": ["Muchos adjetivos", "Un detalle concreto", "Datos sin contexto"], "a": 1 }
+      ],
+      "book": { "title": "Ideas que pegan", "author": "Chip Heath y Dan Heath" },
+      "video": { "title": "Cómo contar historias que enganchan", "query": "storytelling cómo contar historias estructura gancho" }
+    },
+    {
+      "id": "com-influencia",
+      "cat": "comunicacion",
+      "title": "Persuasión ética: los principios de Cialdini",
+      "minutes": 6,
+      "parts": [
+        { "h": "El estudio de la influencia", "p": "Robert Cialdini, psicólogo social, estudió durante años por qué decimos que sí. En su libro Influencia describe principios que funcionan en casi todas las culturas. Conocerlos sirve para comunicar mejor y también para que no te manipulen." },
+        { "h": "Reciprocidad y compromiso", "p": "Reciprocidad: cuando alguien nos da algo, sentimos que tenemos que devolverlo. Compromiso y coherencia: una vez que decimos que sí a algo chico, tendemos a seguir siendo coherentes con eso." },
+        { "h": "Prueba social, autoridad y simpatía", "p": "Prueba social: miramos lo que hacen otros parecidos a nosotros. Autoridad: confiamos en quien sabe del tema. Simpatía: le decimos que sí más fácil a quien nos cae bien y se parece a nosotros." },
+        { "h": "Escasez y uso ético", "p": "Escasez: lo que es limitado parece más valioso. La regla ética es simple: usá estos principios solo con cosas verdaderas. Testimonios reales, conocimiento real, cupos realmente limitados. Inventar escasez o testimonios es manipular." }
+      ],
+      "examples": [
+        "Regalás una guía útil en tu IG: reciprocidad bien usada.",
+        "Mostrás el testimonio real de un cliente contento: prueba social.",
+        "Te dicen quedan 2 lugares y es mentira: escasez usada para manipular. Ahora la podés detectar."
+      ],
+      "exercise": "Revisá tu perfil o tu forma de ofrecer servicios y agregá un elemento real de prueba social o de autoridad.",
+      "quiz": [
+        { "q": "La reciprocidad dice que…", "options": ["Devolvemos lo que nos dan", "Copiamos a los demás", "Lo escaso vale más"], "a": 0 },
+        { "q": "Mostrar testimonios de clientes usa…", "options": ["Escasez", "Prueba social", "Autoridad"], "a": 1 },
+        { "q": "¿Cuál es la regla ética para usar estos principios?", "options": ["Usarlos siempre", "Usarlos solo con cosas verdaderas", "No usarlos nunca"], "a": 1 }
+      ],
+      "book": { "title": "Influencia: la psicología de la persuasión", "author": "Robert B. Cialdini" },
+      "video": { "title": "Los principios de la persuasión de Cialdini", "query": "Cialdini principios de la persuasión explicados" }
+    },
+    {
+      "id": "lid-autoliderazgo",
+      "cat": "liderazgo",
+      "title": "Liderarte a vos primero",
+      "minutes": 6,
+      "parts": [
+        { "h": "Empieza por adentro", "p": "Stephen Covey, en Los 7 hábitos de la gente altamente efectiva, ordena los hábitos de adentro hacia afuera: primero las victorias privadas (liderarte a vos) y después las victorias públicas (trabajar con otros). Es tu razón número 11: primero debo liderarme a mí." },
+        { "h": "Ser proactivo", "p": "El primer hábito de Covey es ser proactivo: hacerte responsable de tu respuesta en vez de culpar a las circunstancias. Covey distingue el círculo de preocupación, todo lo que te preocupa, del círculo de influencia, lo que podés cambiar. Los proactivos trabajan en el segundo." },
+        { "h": "Empezar con el fin en mente", "p": "El segundo hábito es saber a dónde vas. Covey propone imaginar qué te gustaría que digan de vos al final de tu vida y usar eso como brújula. Tus pilares en Rumbo son tu fin en mente dividido en áreas." },
+        { "h": "Primero lo primero", "p": "El tercer hábito es poner primero lo importante. Covey usa una matriz: lo importante y no urgente (entrenar, leer, la tesis, las relaciones) es lo que más cambia tu vida y lo que más se posterga. Bloqueá tiempo para eso antes que para lo demás." }
+      ],
+      "examples": [
+        "En vez de quejarte de que no tenés tiempo, revisás tu agenda y bloqueás 1 hora para la tesis.",
+        "Antes de aceptar un compromiso nuevo, te preguntás si te acerca a tus pilares.",
+        "Cumplís lo que te prometiste a vos mismo: eso te da autoridad para pedirle a otros."
+      ],
+      "exercise": "Elegí una tarea importante y no urgente de esta semana y ponela en la Agenda con día y hora.",
+      "quiz": [
+        { "q": "Según Covey, ¿qué va primero?", "options": ["Las victorias públicas", "Las victorias privadas", "Ninguna"], "a": 1 },
+        { "q": "Ser proactivo significa…", "options": ["Hacer muchas cosas", "Hacerte responsable de tu respuesta", "Planificar todo"], "a": 1 },
+        { "q": "Lo importante y no urgente suele ser…", "options": ["Lo que más se posterga", "Lo menos valioso", "Lo que hay que delegar"], "a": 0 }
+      ],
+      "book": { "title": "Los 7 hábitos de la gente altamente efectiva", "author": "Stephen R. Covey" },
+      "video": { "title": "Los 7 hábitos de Covey explicados", "query": "los 7 hábitos de la gente altamente efectiva resumen Covey" }
+    },
+    {
+      "id": "lid-responsabilidad",
+      "cat": "liderazgo",
+      "title": "Responsabilidad extrema",
+      "minutes": 5,
+      "parts": [
+        { "h": "La idea", "p": "Jocko Willink y Leif Babin, ex oficiales de los Navy SEAL de Estados Unidos, escribieron Responsabilidad extrema. Su idea principal: el líder es dueño de todo lo que pasa en su mundo. No hay excusas ni culpables afuera." },
+        { "h": "No hay malos equipos", "p": "Una de sus frases más conocidas es que no hay malos equipos, solo malos líderes. Cuentan cómo un equipo que siempre perdía empezó a ganar al cambiar de líder, con la misma gente." },
+        { "h": "Creer en la misión", "p": "Para liderar, primero tenés que entender y creer en el porqué de lo que hacés. Si no lo entendés, preguntá hasta entenderlo. Un líder que no cree no puede convencer a nadie." },
+        { "h": "Simple y priorizado", "p": "Proponen dos reglas más: mantener los planes simples, para que todos los entiendan, y ante el caos, priorizar y ejecutar: elegir lo más importante, resolverlo y recién después pasar a lo siguiente." }
+      ],
+      "examples": [
+        "Un trabajo grupal sale mal: en vez de culpar a otros, preguntás qué pudiste haber explicado mejor.",
+        "Te sentís desbordado: hacés una lista, elegís la tarea más importante y la terminás primero.",
+        "Explicás un plan a tu equipo en tres pasos simples en vez de diez."
+      ],
+      "exercise": "Pensá algo que salió mal esta semana. Escribí qué parte fue tu responsabilidad y qué vas a hacer distinto.",
+      "quiz": [
+        { "q": "¿Quiénes escribieron Responsabilidad extrema?", "options": ["Jocko Willink y Leif Babin", "Stephen Covey", "Simon Sinek"], "a": 0 },
+        { "q": "Según el libro, no hay malos equipos, solo…", "options": ["Malos jugadores", "Malos líderes", "Malas ideas"], "a": 1 },
+        { "q": "Ante el caos, proponen…", "options": ["Hacer todo a la vez", "Priorizar y ejecutar", "Esperar"], "a": 1 }
+      ],
+      "book": { "title": "Responsabilidad extrema", "author": "Jocko Willink y Leif Babin" },
+      "video": { "title": "Jocko Willink: responsabilidad extrema", "query": "Jocko Willink responsabilidad extrema subtitulado" }
+    },
+    {
+      "id": "lid-feedback",
+      "cat": "liderazgo",
+      "title": "Dar feedback que ayude",
+      "minutes": 5,
+      "parts": [
+        { "h": "Franqueza radical", "p": "Kim Scott, que trabajó como líder en Google y Apple, escribió Franqueza radical. Propone que el buen feedback combina dos cosas: que te importe la persona y que le digas la verdad de forma directa." },
+        { "h": "Los cuatro cuadrantes", "p": "Si te importa pero no sos directo, caés en la empatía ruinosa: no decís nada para no lastimar, y la persona no mejora. Si sos directo pero no te importa, es agresión. Si no te importa ni sos directo, es falsedad manipuladora. Lo ideal: importarte y ser directo." },
+        { "h": "Una fórmula práctica", "p": "Usá el modelo SBI: Situación (en la reunión del martes), Comportamiento (interrumpiste tres veces a Juan) e Impacto (él dejó de proponer ideas). Hablás de hechos, no de la personalidad." },
+        { "h": "Pedir feedback primero", "p": "Kim Scott recomienda empezar pidiendo feedback antes de darlo. Preguntá: ¿qué podría hacer o dejar de hacer para que sea más fácil trabajar conmigo? Y cuando te lo den, agradecé sin defenderte." }
+      ],
+      "examples": [
+        "En vez de sos desordenado, decís: en el último trabajo entregaste sin revisar y tuvimos que corregir 5 errores.",
+        "Le preguntás a un cliente qué mejorarías de mi servicio y agradecés la respuesta.",
+        "Felicitás algo concreto: tu presentación tuvo un inicio muy claro."
+      ],
+      "exercise": "Hoy pedile feedback a una persona sobre algo concreto que hagas y anotá lo que te dijo en el journal.",
+      "quiz": [
+        { "q": "La franqueza radical combina…", "options": ["Importarte y ser directo", "Ser directo y duro", "Ser amable y callarte"], "a": 0 },
+        { "q": "No decir nada para no lastimar es…", "options": ["Franqueza radical", "Empatía ruinosa", "Agresión"], "a": 1 },
+        { "q": "En el modelo SBI, la B es…", "options": ["El comportamiento", "El beneficio", "La base"], "a": 0 }
+      ],
+      "book": { "title": "Franqueza radical", "author": "Kim Scott" },
+      "video": { "title": "Kim Scott: franqueza radical", "query": "Kim Scott franqueza radical radical candor español" }
+    },
+    {
+      "id": "lid-delegar",
+      "cat": "liderazgo",
+      "title": "Delegar y dar autonomía",
+      "minutes": 5,
+      "parts": [
+        { "h": "Por qué cuesta delegar", "p": "Muchos emprendedores no delegan porque creen que lo hacen mejor o más rápido solos. A corto plazo puede ser cierto, pero a largo plazo te volvés el cuello de botella de tu propio proyecto." },
+        { "h": "Dar control, no solo tareas", "p": "David Marquet, capitán de submarino de la Marina de Estados Unidos, cuenta en su libro Turn the Ship Around! cómo cambió la forma de mandar: en vez de dar órdenes, pedía a su gente que dijera tengo la intención de… y él solo confirmaba. Así el equipo empezó a pensar y decidir." },
+        { "h": "Cómo delegar bien", "p": "Explicá el resultado que esperás y por qué importa, no solo el cómo. Acordá cuándo se revisa. Dejá espacio para que la persona lo haga a su manera, aunque no sea exactamente como lo harías vos." },
+        { "h": "Los líderes comen al final", "p": "Simon Sinek usa esta imagen de los marines para explicar que un líder cuida primero a su gente. Cuando el equipo se siente cuidado, confía, y con confianza se puede delegar." }
+      ],
+      "examples": [
+        "Para tu marca, delegás la edición de videos explicando qué estilo querés y para qué público.",
+        "En un trabajo grupal, cada uno propone cómo va a hacer su parte en vez de que vos decidas todo.",
+        "Revisás el avance el miércoles en vez de controlar cada hora."
+      ],
+      "exercise": "Escribí una tarea que podrías delegar o automatizar este mes y a quién o a qué herramienta se la pasarías.",
+      "quiz": [
+        { "q": "Si nunca delegás, a largo plazo te volvés…", "options": ["Más libre", "El cuello de botella", "Un mejor líder"], "a": 1 },
+        { "q": "¿Qué frase pedía decir David Marquet a su equipo?", "options": ["Sí, señor", "Tengo la intención de…", "No sé"], "a": 1 },
+        { "q": "Al delegar conviene explicar…", "options": ["Solo el cómo", "El resultado esperado y por qué importa", "Nada"], "a": 1 }
+      ],
+      "book": { "title": "Turn the Ship Around!", "author": "L. David Marquet" },
+      "video": { "title": "David Marquet: líderes que crean líderes", "query": "David Marquet greatness liderazgo subtitulado" }
+    },
+    {
+      "id": "fre-frecuencia",
+      "cat": "frecuencias",
+      "title": "Las frecuencias: cómo trabajar en una frecuencia elevada",
+      "minutes": 7,
+      "parts": [
+        { "h": "De dónde viene la idea", "p": "Se habla mucho de vibrar alto o estar en una frecuencia elevada. La idea se hizo popular con autores espirituales como David Hawkins, que propuso una escala de la conciencia donde la vergüenza y el miedo están abajo y la gratitud, el amor y la paz están arriba." },
+        { "h": "Qué dice la ciencia", "p": "Conviene ser honesto: no hay evidencia científica de que las emociones sean frecuencias físicas medibles, como las de la radio. Pero sí hay mucha evidencia de algo parecido: tu estado emocional cambia cómo pensás, cómo decidís y cómo te tratan. La psicóloga Barbara Fredrickson mostró que las emociones positivas amplían la atención y ayudan a construir recursos." },
+        { "h": "Traducido a la práctica", "p": "Trabajar en una frecuencia elevada se puede entender como trabajar desde un estado de calma, energía y propósito, y no desde el miedo o la queja. En ese estado se te ocurren más ideas, comunicás mejor y sostenés mejor la disciplina." },
+        { "h": "Cómo subir tu estado", "p": "Las palancas más sólidas son concretas: dormir bien, moverte, exponerte a la luz de la mañana, respirar lento, practicar gratitud, cuidar con quién y con qué contenido pasás el tiempo, y empezar el día con una tarea que te dé sensación de logro." }
+      ],
+      "examples": [
+        "Antes de una llamada con un cliente, hacés 2 minutos de respiración lenta y repasás por qué te gusta lo que hacés.",
+        "Notás que después de discutir en redes trabajás peor: elegís no entrar antes de estudiar.",
+        "Arrancás el día viendo el amanecer y entrenando: llegás a la tarea difícil con mejor estado."
+      ],
+      "exercise": "Hoy, antes de la tarea más importante del día, hacé 2 minutos de respiración lenta y escribí 3 cosas por las que estás agradecido.",
+      "quiz": [
+        { "q": "¿Hay evidencia de que las emociones son frecuencias físicas medibles?", "options": ["Sí, está comprobado", "No, pero el estado emocional sí afecta cómo pensás y actuás", "Solo en la radio"], "a": 1 },
+        { "q": "Según Fredrickson, las emociones positivas…", "options": ["Amplían la atención y ayudan a construir recursos", "No tienen efecto", "Solo distraen"], "a": 0 },
+        { "q": "¿Cuál es una palanca concreta para subir tu estado?", "options": ["Dormir menos", "Moverte y dormir bien", "Quejarte más"], "a": 1 }
+      ],
+      "book": { "title": "Dejar ir", "author": "David R. Hawkins" },
+      "video": { "title": "Barbara Fredrickson: emociones positivas", "query": "Barbara Fredrickson emociones positivas ampliar y construir" }
+    },
+    {
+      "id": "fre-energia",
+      "cat": "frecuencias",
+      "title": "Gestionar tu energía, no solo tu tiempo",
+      "minutes": 6,
+      "parts": [
+        { "h": "El tiempo es fijo, la energía no", "p": "Jim Loehr y Tony Schwartz, en The Power of Full Engagement, proponen que el recurso clave no es el tiempo sino la energía. Todos tenemos 24 horas, pero no la misma energía para usarlas." },
+        { "h": "Cuatro tipos de energía", "p": "Física: sueño, comida, movimiento. Emocional: cómo te sentís y con quién estás. Mental: foco y atención. Espiritual: sentido y propósito. Se parecen mucho a tus pilares de Rumbo." },
+        { "h": "Trabajar en ciclos", "p": "Los autores recomiendan trabajar como un atleta: esfuerzo intenso seguido de recuperación. El cuerpo funciona en ciclos de alrededor de 90 minutos de actividad. Después de un bloque de foco, hacé una pausa real: caminar, tomar agua, mirar lejos." },
+        { "h": "Rituales", "p": "Para no depender de la fuerza de voluntad, proponen rituales: conductas fijas a horas fijas. Tu ritual matutino es un ejemplo. Cuanto más automático, menos energía gastás en decidir." }
+      ],
+      "examples": [
+        "Estudiás la tesis 90 minutos y después salís a caminar 10 minutos.",
+        "Notás que a las 15 te baja la energía: ponés ahí tareas fáciles y las difíciles a la mañana.",
+        "Dormís 7 a 8 horas antes de un día de parciales en vez de estudiar toda la noche."
+      ],
+      "exercise": "Hoy hacé un bloque de 90 minutos de foco en algo importante y después una pausa de 10 minutos sin pantallas.",
+      "quiz": [
+        { "q": "Según Loehr y Schwartz, el recurso clave es…", "options": ["El tiempo", "La energía", "La plata"], "a": 1 },
+        { "q": "¿Cuál NO es uno de los cuatro tipos de energía?", "options": ["Física", "Mental", "Financiera"], "a": 2 },
+        { "q": "¿Para qué sirven los rituales?", "options": ["Para no depender de la fuerza de voluntad", "Para trabajar más horas", "Para no descansar"], "a": 0 }
+      ],
+      "book": { "title": "The Power of Full Engagement", "author": "Jim Loehr y Tony Schwartz" },
+      "video": { "title": "Gestionar la energía, no el tiempo", "query": "gestionar la energía no el tiempo Tony Schwartz" }
+    },
+    {
+      "id": "fre-respiracion",
+      "cat": "frecuencias",
+      "title": "La respiración para cambiar tu estado",
+      "minutes": 5,
+      "parts": [
+        { "h": "El control remoto del sistema nervioso", "p": "La respiración es de las pocas funciones automáticas del cuerpo que también podés controlar a voluntad. Respirar lento, sobre todo con exhalaciones largas, ayuda a activar la respuesta de calma del sistema nervioso." },
+        { "h": "El suspiro fisiológico", "p": "Un estudio de la Universidad de Stanford (Balban y colegas, 2023) comparó técnicas de respiración de 5 minutos por día. El suspiro cíclico, dos inhalaciones por la nariz seguidas de una exhalación larga por la boca, mejoró el ánimo y redujo la ansiedad más que la meditación de atención en ese estudio." },
+        { "h": "Respiración cuadrada", "p": "Otra técnica simple: inhalá 4 segundos, mantené 4, exhalá 4 y mantené 4. Se usa para recuperar la calma antes de situaciones de presión, como hablar en público o un examen." },
+        { "h": "Respirar por la nariz", "p": "James Nestor, en Respira, recopila investigaciones sobre los beneficios de respirar por la nariz y más lento en el día a día. Es un hábito chico que podés practicar mientras caminás o estudiás." }
+      ],
+      "examples": [
+        "Antes de un parcial, hacés 5 suspiros fisiológicos en la puerta del aula.",
+        "Estás enojado por un mensaje: respirás cuadrado un minuto antes de contestar.",
+        "Mientras caminás al gym, respirás solo por la nariz."
+      ],
+      "exercise": "Hoy hacé 5 minutos de suspiro cíclico: dos inhalaciones por la nariz y una exhalación larga por la boca.",
+      "quiz": [
+        { "q": "¿Qué tipo de respiración ayuda más a calmarte?", "options": ["Rápida y corta", "Lenta con exhalaciones largas", "Aguantar el aire mucho tiempo"], "a": 1 },
+        { "q": "El suspiro cíclico es…", "options": ["Dos inhalaciones por la nariz y una exhalación larga", "Respirar por la boca rápido", "No respirar"], "a": 0 },
+        { "q": "En la respiración cuadrada, cada fase dura…", "options": ["1 segundo", "4 segundos", "10 segundos"], "a": 1 }
+      ],
+      "book": { "title": "Respira", "author": "James Nestor" },
+      "video": { "title": "Suspiro fisiológico explicado", "query": "suspiro fisiológico respiración Huberman español" }
+    },
+    {
+      "id": "fre-gratitud",
+      "cat": "frecuencias",
+      "title": "Gratitud: entrenar la mirada",
+      "minutes": 5,
+      "parts": [
+        { "h": "Más que una buena costumbre", "p": "Robert Emmons, psicólogo de la Universidad de California, es uno de los mayores investigadores de la gratitud. En un estudio conocido (Emmons y McCullough, 2003), quienes anotaban cosas por las que estaban agradecidos cada semana se sentían mejor con su vida que quienes anotaban molestias." },
+        { "h": "Por qué funciona", "p": "El cerebro tiende a fijarse más en lo negativo, porque eso nos protegía de peligros. La gratitud es un entrenamiento para notar también lo que funciona. No niega los problemas: equilibra la mirada." },
+        { "h": "Cómo practicarla bien", "p": "Sé específico: no alcanza con mi familia; mejor Maga me hizo reír cuando estaba cansado. Variá las cosas para que no se vuelva automático. Y de vez en cuando, decíselo a la persona." },
+        { "h": "Gratitud y disciplina", "p": "Agradecer lo que ya lograste te da combustible para seguir. Revisar a la noche tres cosas buenas del día es una forma de cerrar el día con energía, aunque no hayas cumplido todo." }
+      ],
+      "examples": [
+        "En el journal: hoy agradezco haber entrenado aunque llovía.",
+        "Le mandás un mensaje a un amigo: gracias por ayudarme con la mudanza, me salvaste.",
+        "Antes de dormir, repasás tres cosas buenas concretas del día."
+      ],
+      "exercise": "Esta noche escribí en el journal tres cosas específicas por las que estás agradecido hoy, y mandale un mensaje de agradecimiento a una persona.",
+      "quiz": [
+        { "q": "En el estudio de Emmons, quienes anotaban gratitud…", "options": ["Se sentían mejor con su vida", "No notaron cambios", "Se sentían peor"], "a": 0 },
+        { "q": "¿Por qué el cerebro se fija más en lo negativo?", "options": ["Porque nos protegía de peligros", "Por la tecnología", "No es así"], "a": 0 },
+        { "q": "Una buena práctica de gratitud es…", "options": ["Repetir siempre lo mismo", "Ser específico y variar", "Hacerla una vez por año"], "a": 1 }
+      ],
+      "book": { "title": "¡Gracias! De cómo la gratitud puede hacerte feliz", "author": "Robert A. Emmons" },
+      "video": { "title": "La ciencia de la gratitud", "query": "ciencia de la gratitud Robert Emmons" }
+    }
+  ]
+}

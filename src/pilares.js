@@ -356,6 +356,8 @@
         if (items.length) save({ ...data, tasks: [...(data.tasks || []), ...items] });
         return items;
       },
+      // Cursos: progreso, categorías y temas propios (todo en objetos por id, para que la nube los una bien).
+      saveCursos(patch) { const d = latest.current; save({ ...d, cursos: { ...(d.cursos || {}), ...patch } }); },
       // Journaling: una entrada por fecha { text, prompt, added, updatedAt }.
       saveJournal(day, patch) { const d = latest.current, j = d.journal || {}; save({ ...d, journal: { ...j, [day]: { ...(j[day] || {}), ...patch, updatedAt: Date.now() } } }); },
       deleteJournal(day) { const d = latest.current; save({ ...d, journal: { ...(d.journal || {}), [day]: { text: "", deleted: true, updatedAt: Date.now() } } }); },
@@ -563,6 +565,7 @@
       sec("nutricion", "Nutrici\xF3n", h(NutritionView, { nutrition: cx.nutrition, onChange: cx.persistNutrition }), false);
     }
     if (pillar === "mental") {
+      out.push(h(PSection, { key: "cursos", title: "Cursos", color: p.color, open: true }, h(CoursesPage, { pil })));
       sec("sistemas", "Sistemas de disciplina", h(SystemsView, { data: cx.disciplina, onChange: cx.persistDisciplina, onCreateHabit: cx.createHabitFromSystem, habitNames: cx.existingNames }), false);
       sec("checkin", "C\xF3mo me siento", h(CheckinCard, { checkins: cx.checkins, todayKey: cx.todayKey, onChange: cx.persistCheckins }), false);
     }
@@ -783,6 +786,168 @@
         h("div", { style: { display: "flex", gap: 6, marginTop: 8 } },
           h("button", { type: "button", onClick: () => { setDay(k); window.scrollTo({ top: 0, behavior: "smooth" }); }, style: pBtn({ padding: "4px 10px", fontSize: 12 }) }, "Leer y editar"),
           h("button", { type: "button", onClick: () => { if (confirm("\xBFBorrar la entrada de " + label(k) + "?")) { pil.deleteJournal(k); if (k === day) setText(""); } }, style: pBtn({ padding: "4px 10px", fontSize: 12, color: C.danger }) }, "Borrar")))));
+  }
+  // ── Cursos (Pilar Mental) ────────────────────────────────────────────────────
+  // Las lecciones están en cursos.json (se baja una vez y queda guardado para usar sin internet).
+  // El progreso se guarda en pilares.cursos: terminadas, guardadas, respuestas, categorías y temas propios.
+  var COURSE_CATS = [["filosofia", "Filosof\xEDa"], ["psicologia", "Psicolog\xEDa"], ["comunicacion", "Comunicaci\xF3n"], ["liderazgo", "Liderazgo"], ["frecuencias", "Frecuencias y energ\xEDa personal"]];
+  var CourseStore = { lessons: null, loading: null, load() { if (this.lessons) return Promise.resolve(this.lessons); if (!this.loading) this.loading = fetch("cursos.json").then((r) => r.json()).then((j) => (this.lessons = j.lessons)).catch((e) => { this.loading = null; throw e; }); return this.loading; } };
+  var bookLink = (b) => "https://www.google.com/search?tbm=bks&q=" + encodeURIComponent(b.title + " " + b.author);
+  var videoLink = (v) => "https://www.youtube.com/results?search_query=" + encodeURIComponent(v.query || v.title);
+  var STOP = new Set("como para pero porque cuando donde sobre entre esto esta este estos estas tiene tengo puedo hacer hace sirve sirven cual cuales quien algo mucho muy mas menos tema leccion".split(" "));
+  // "Chat" sin internet: busca en la lección las frases que más se parecen a la pregunta.
+  function answerFromLesson(lesson, question) {
+    const words = norm(question).split(" ").filter((w) => w.length > 3 && !STOP.has(w));
+    const sentences = [...lesson.parts.map((p) => p.p), ...lesson.examples].flatMap((t) => t.split(/(?:[.:;])\s+/)).map((s) => s.trim()).filter((s) => s.length > 20);
+    const scored = sentences.map((s) => { const n = norm(s); return { s, score: words.reduce((a, w) => a + (n.includes(w.slice(0, Math.max(4, w.length - 2))) ? 1 : 0), 0) }; }).filter((x) => x.score > 0).sort((a, b) => b.score - a.score);
+    return scored.slice(0, 2).map((x) => x.s.replace(/\.?$/, "."));
+  }
+  function useCursos(pil) {
+    const c = pil.data.cursos || {};
+    const set = (patch) => pil.saveCursos(patch);
+    const cats = COURSE_CATS.map(([id, name]) => ({ id, name, ...(c.cats || {})[id] })).concat(Object.entries(c.cats || {}).filter(([id, x]) => x.custom).map(([id, x]) => ({ id, ...x }))).filter((x) => !x.hidden);
+    return { c, set, cats };
+  }
+  function CoursesPage({ pil }) {
+    const h = React.createElement;
+    const [lessons, setLessons] = useState(CourseStore.lessons);
+    const [err, setErr] = useState("");
+    const [cat, setCat] = useState(null);
+    const [open, setOpen] = useState(null);
+    const [q, setQ] = useState("");
+    const { c, set, cats } = useCursos(pil);
+    useEffect(() => { if (!lessons) CourseStore.load().then(setLessons).catch(() => setErr("No pude bajar las lecciones. Revis\xE1 la conexi\xF3n y volv\xE9 a entrar.")); }, []);
+    if (err) return h("p", { style: { color: C.danger, fontSize: 13 } }, err);
+    if (!lessons) return h("p", { style: { color: C.textFaint, fontSize: 13 } }, "Cargando cursos…");
+    const done = c.done || {}, saved = c.saved || {};
+    const custom = Object.entries(c.custom || {}).map(([id, x]) => ({ id, ...x })).filter((x) => !x.deleted);
+    const visible = lessons.filter((l) => cats.some((k) => k.id === l.cat));
+    const openLesson = (id) => { setOpen(id); set({ seen: { ...(c.seen || {}), [id]: Date.now() } }); window.scrollTo({ top: 0, behavior: "smooth" }); };
+    const current = open && (lessons.find((l) => l.id === open) || custom.find((x) => x.id === open));
+    if (current) return current.parts ? h(LessonView, { pil, lesson: current, onBack: () => setOpen(null) }) : h(CustomTopic, { pil, topic: current, onBack: () => setOpen(null) });
+    const teachNew = () => {
+      const pool = visible.filter((l) => !done[l.id] && !(c.seen || {})[l.id]);
+      const pick = (pool.length ? pool : visible.filter((l) => !done[l.id]));
+      const list = pick.length ? pick : visible;
+      if (list.length) openLesson(list[Math.floor(Math.random() * list.length)].id);
+    };
+    const nq = norm(q);
+    const found = nq ? visible.filter((l) => norm(l.title + " " + l.parts.map((p) => p.h + " " + p.p).join(" ")).includes(nq) || nq.split(" ").filter((w) => w.length > 3).some((w) => norm(l.title).includes(w))) : [];
+    const pending = Object.entries(c.pending || {}).map(([id, x]) => ({ id, ...x })).filter((x) => !x.deleted);
+    const lessonRow = (l) => h("button", { key: l.id, type: "button", onClick: () => openLesson(l.id), style: { display: "flex", gap: 10, alignItems: "center", width: "100%", textAlign: "left", background: "transparent", padding: "11px 2px", borderBottom: `1px solid ${C.borderSoft}` } },
+      h("span", { style: { width: 22, height: 22, borderRadius: 99, flex: "none", display: "grid", placeItems: "center", fontSize: 12, border: `1.5px solid ${done[l.id] ? C.gold : C.textFaint}`, background: done[l.id] ? C.gold : "transparent", color: C.onAccent } }, done[l.id] ? "✓" : ""),
+      h("span", { style: { flex: 1, color: C.text, fontSize: 14 } }, l.title, h("span", { style: { display: "block", fontSize: 11, color: C.textFaint } }, l.minutes ? l.minutes + " min" : "Tema propio", saved[l.id] ? " \xB7 ★ guardada" : "")),
+      h("span", { style: { color: C.textFaint } }, "›"));
+    if (cat) {
+      const k = cats.find((x) => x.id === cat) || { name: "Categor\xEDa" };
+      const list = [...visible.filter((l) => l.cat === cat), ...custom.filter((x) => x.cat === cat)];
+      return h("div", null,
+        h("button", { type: "button", onClick: () => setCat(null), style: { color: C.textMuted, fontSize: 13, background: "transparent", marginBottom: 8 } }, "← Cursos"),
+        h("p", { style: { color: C.text, fontSize: 18, marginBottom: 8 } }, k.name),
+        h("div", { style: { ...pCard, padding: "2px 12px", marginBottom: 10 } }, list.length ? list.map(lessonRow) : h("p", { style: { color: C.textFaint, fontSize: 13, padding: "12px 0" } }, "Todav\xEDa no hay temas en esta categor\xEDa.")),
+        h("button", { type: "button", onClick: () => { const t = prompt("Nombre del tema nuevo:"); if (t && t.trim()) { const id = uid(); set({ custom: { ...(c.custom || {}), [id]: { cat, title: t.trim(), notes: "", createdAt: Date.now() } } }); openLesson(id); } }, style: pBtn() }, "+ Tema propio"));
+    }
+    const recs = visible.filter((l) => (c.seen || {})[l.id]).sort((a, b) => (c.seen[b.id] || 0) - (c.seen[a.id] || 0));
+    const nDone = visible.filter((l) => done[l.id]).length, nSaved = visible.filter((l) => saved[l.id]).length;
+    return h("div", null,
+      h("button", { type: "button", onClick: teachNew, style: pBtn({ width: "100%", background: C.gold, color: C.onAccent, border: "none", padding: "12px", fontSize: 15, marginBottom: 10 }) }, "✦ Ense\xF1ame algo nuevo"),
+      h("div", { style: { display: "flex", gap: 8, alignItems: "center", marginBottom: 6 } },
+        h("input", { value: q, onChange: (e) => setQ(e.target.value), placeholder: "Ped\xED una lecci\xF3n sobre cualquier tema…", style: { ...pInput, padding: "10px 12px", fontSize: 14 } }),
+        h(MicButton, { onClick: () => pil.setRecOpen({ mode: "text", onText: (t) => setQ(t) }), label: "Dictar el tema" })),
+      nq && h("div", { style: { ...pCard, padding: "4px 12px", marginBottom: 10 } },
+        found.length ? found.map(lessonRow) : h("div", { style: { padding: "10px 0", fontSize: 13, color: C.textMuted } },
+          "Todav\xEDa no tengo una lecci\xF3n sobre “", q, "”. ",
+          h("a", { href: videoLink({ query: q }), target: "_blank", rel: "noopener", style: { color: C.gold } }, "Buscar videos en YouTube"), " \xB7 ",
+          h("a", { href: bookLink({ title: q, author: "" }), target: "_blank", rel: "noopener", style: { color: C.gold } }, "Buscar libros"),
+          h("div", { style: { marginTop: 8 } }, h("button", { type: "button", onClick: () => { const id = uid(); set({ pending: { ...(c.pending || {}), [id]: { text: q.trim(), createdAt: Date.now() } } }); setQ(""); }, style: pBtn({ fontSize: 12, padding: "5px 10px" }) }, "Guardar como tema pendiente")))),
+      h("p", { style: { fontSize: 12, color: C.textFaint, margin: "4px 0 12px" } }, nDone, " de ", visible.length, " lecciones terminadas \xB7 ", nSaved, " guardadas para despu\xE9s"),
+      cats.map((k) => {
+        const list = [...visible.filter((l) => l.cat === k.id), ...custom.filter((x) => x.cat === k.id)];
+        const nd = list.filter((l) => done[l.id]).length;
+        return h("div", { key: k.id, style: { ...pCard, padding: 12, marginBottom: 8, display: "flex", alignItems: "center", gap: 10 } },
+          h("button", { type: "button", onClick: () => setCat(k.id), style: { flex: 1, textAlign: "left", background: "transparent" } },
+            h("div", { style: { color: C.text, fontSize: 15 } }, k.name), h("div", { style: { color: C.textFaint, fontSize: 12, marginTop: 2 } }, list.length, " temas \xB7 ", nd, " terminados"), h("div", { style: { marginTop: 6 } }, h(MiniBar, { pct: list.length ? nd / list.length * 100 : 0 }))),
+          h("button", { type: "button", onClick: () => { const n = prompt("Nuevo nombre de la categor\xEDa:", k.name); if (n && n.trim()) set({ cats: { ...(c.cats || {}), [k.id]: { ...(c.cats || {})[k.id], name: n.trim() } } }); }, style: pBtn({ padding: "5px 9px", fontSize: 12 }), "aria-label": "Editar categor\xEDa" }, "✎"),
+          h("button", { type: "button", onClick: () => { if (confirm(`\xBFBorrar la categor\xEDa “${k.name}”? Tu progreso queda guardado.`)) set({ cats: { ...(c.cats || {}), [k.id]: { ...(c.cats || {})[k.id], name: k.name, hidden: true } } }); }, style: pBtn({ padding: "5px 9px", fontSize: 12, color: C.danger }), "aria-label": "Borrar categor\xEDa" }, "✕"));
+      }),
+      h("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 } },
+        h("button", { type: "button", onClick: () => { const n = prompt("Nombre de la categor\xEDa nueva:"); if (n && n.trim()) set({ cats: { ...(c.cats || {}), [uid()]: { name: n.trim(), custom: true } } }); }, style: pBtn() }, "+ Nueva categor\xEDa"),
+        COURSE_CATS.some(([id]) => ((c.cats || {})[id] || {}).hidden) && h("button", { type: "button", onClick: () => { const next = { ...(c.cats || {}) }; COURSE_CATS.forEach(([id]) => { if (next[id]) next[id] = { ...next[id], hidden: false }; }); set({ cats: next }); }, style: pBtn() }, "Recuperar categor\xEDas borradas")),
+      pending.length > 0 && h("div", { style: { marginTop: 16 } }, h("p", { style: { ...PLabel, marginBottom: 6 } }, "Temas pendientes"), pending.map((x) => h("div", { key: x.id, style: { display: "flex", gap: 8, alignItems: "center", fontSize: 13, color: C.textMuted, padding: "6px 0", borderBottom: `1px solid ${C.borderSoft}` } },
+        h("span", { style: { flex: 1, color: C.text } }, x.text), h("a", { href: videoLink({ query: x.text }), target: "_blank", rel: "noopener", style: { color: C.gold, fontSize: 12 } }, "YouTube"), h("a", { href: bookLink({ title: x.text, author: "" }), target: "_blank", rel: "noopener", style: { color: C.gold, fontSize: 12 } }, "Libros"),
+        h("button", { type: "button", onClick: () => set({ pending: { ...(c.pending || {}), [x.id]: { ...x, deleted: true } } }), style: { color: C.textFaint, background: "transparent" }, "aria-label": "Quitar" }, "✕")))),
+      recs.length > 0 && h(PSection, { title: "Libros y videos recomendados", open: false }, recs.map((l) => h("div", { key: l.id, style: { padding: "8px 0", borderBottom: `1px solid ${C.borderSoft}`, fontSize: 13 } },
+        h("div", { style: { color: C.textFaint, fontSize: 11 } }, l.title),
+        h("a", { href: bookLink(l.book), target: "_blank", rel: "noopener", style: { color: C.text, display: "block" } }, "\u{1F4D6} ", l.book.title, " — ", l.book.author),
+        h("a", { href: videoLink(l.video), target: "_blank", rel: "noopener", style: { color: C.text, display: "block" } }, "▶ ", l.video.title, " (b\xFAsqueda en YouTube)")))));
+  }
+  function LessonView({ pil, lesson, onBack }) {
+    const h = React.createElement;
+    const { c, set } = useCursos(pil);
+    const answers = (c.quiz || {})[lesson.id] || {};
+    const [ask, setAsk] = useState("");
+    const [chat, setChat] = useState([]);
+    const [addedEx, setAddedEx] = useState(false);
+    const done = Boolean((c.done || {})[lesson.id]), saved = Boolean((c.saved || {})[lesson.id]);
+    const toggle = (key, on) => { const m = { ...(c[key] || {}) }; if (on) m[lesson.id] = Date.now(); else delete m[lesson.id]; set({ [key]: m }); };
+    const sendAsk = () => {
+      if (!ask.trim()) return;
+      const found = answerFromLesson(lesson, ask);
+      setChat([...chat, { q: ask.trim(), a: found }]);
+      setAsk("");
+    };
+    const card = { ...pCard, padding: 14, marginBottom: 10 };
+    return h("div", null,
+      h("button", { type: "button", onClick: onBack, style: { color: C.textMuted, fontSize: 13, background: "transparent", marginBottom: 8 } }, "← Cursos"),
+      h("p", { style: { ...PLabel, marginBottom: 2 } }, (COURSE_CATS.find(([id]) => id === lesson.cat) || [0, ""])[1], " \xB7 ", lesson.minutes, " min"),
+      h("h2", { style: { fontFamily: FONT_DISPLAY, color: C.text, fontSize: 22, fontWeight: 400, lineHeight: 1.25, marginBottom: 12 } }, lesson.title),
+      lesson.parts.map((p, i) => h("div", { key: i, style: card }, h("p", { style: { color: C.gold, fontSize: 12, fontWeight: 600, marginBottom: 4 } }, i + 1, ". ", p.h), h("p", { style: { color: C.text, fontSize: 15, lineHeight: 1.55 } }, p.p))),
+      h("div", { style: card }, h("p", { style: { color: C.gold, fontSize: 12, fontWeight: 600, marginBottom: 6 } }, "Ejemplos en la vida diaria"), lesson.examples.map((e, i) => h("p", { key: i, style: { color: C.text, fontSize: 14, lineHeight: 1.5, marginBottom: 6 } }, "• ", e))),
+      h("div", { style: { ...card, borderColor: withAlpha(C.gold, 0.5), background: withAlpha(C.gold, 0.08) } },
+        h("p", { style: { color: C.gold, fontSize: 12, fontWeight: 600, marginBottom: 4 } }, "Ejercicio para hoy"),
+        h("p", { style: { color: C.text, fontSize: 14, lineHeight: 1.5, marginBottom: 8 } }, lesson.exercise),
+        h("button", { type: "button", disabled: addedEx, onClick: () => { pil.addTasks([{ text: lesson.exercise, pillar: "mental", kind: "diario", date: fmtDate(/* @__PURE__ */ new Date()) }]); setAddedEx(true); }, style: pBtn({ background: addedEx ? C.card2 : C.gold, color: addedEx ? C.textMuted : C.onAccent, border: "none" }) }, addedEx ? "✓ Agregado a tus objetivos de hoy" : "+ Agregar como objetivo de hoy")),
+      h("div", { style: card }, h("p", { style: { color: C.gold, fontSize: 12, fontWeight: 600, marginBottom: 8 } }, "\xBFQu\xE9 entendiste?"),
+        lesson.quiz.map((qz, i) => h("div", { key: i, style: { marginBottom: 12 } },
+          h("p", { style: { color: C.text, fontSize: 14, marginBottom: 6 } }, i + 1, ". ", qz.q),
+          qz.options.map((op, j) => {
+            const picked = answers[i] === j, answered = answers[i] !== void 0, right = j === qz.a;
+            const bg = answered && right ? withAlpha(C.sage, 0.25) : picked ? withAlpha(C.danger, 0.2) : "transparent";
+            return h("button", { key: j, type: "button", onClick: () => set({ quiz: { ...(c.quiz || {}), [lesson.id]: { ...answers, [i]: j } } }), style: { display: "block", width: "100%", textAlign: "left", fontSize: 13, color: C.text, background: bg, border: `1px solid ${answered && right ? C.sage : C.border}`, borderRadius: 10, padding: "8px 10px", marginBottom: 5 } }, op, answered && right ? " ✓" : picked ? " ✕" : "");
+          }))),
+        h("p", { style: { fontSize: 12, color: C.textFaint } }, Object.keys(answers).filter((i) => answers[i] === lesson.quiz[i].a).length, " de ", lesson.quiz.length, " correctas")),
+      h("div", { style: card }, h("p", { style: { color: C.gold, fontSize: 12, fontWeight: 600, marginBottom: 6 } }, "Para profundizar"),
+        h("a", { href: bookLink(lesson.book), target: "_blank", rel: "noopener", style: { display: "block", color: C.text, fontSize: 14, marginBottom: 6 } }, "\u{1F4D6} Libro: ", h("b", { style: { fontWeight: 600 } }, lesson.book.title), " — ", lesson.book.author),
+        h("a", { href: videoLink(lesson.video), target: "_blank", rel: "noopener", style: { display: "block", color: C.text, fontSize: 14 } }, "▶ Video: ", lesson.video.title, h("span", { style: { color: C.textFaint, fontSize: 12 } }, " (abre la b\xFAsqueda en YouTube)"))),
+      h("div", { style: card }, h("p", { style: { color: C.gold, fontSize: 12, fontWeight: 600, marginBottom: 4 } }, "Pregunt\xE1 sobre el tema"),
+        h("p", { style: { fontSize: 11, color: C.textFaint, marginBottom: 8 } }, "Te respondo con lo que dice la lecci\xF3n. Para ir m\xE1s lejos, te dejo una b\xFAsqueda en Google."),
+        chat.map((m, i) => h("div", { key: i, style: { marginBottom: 10 } },
+          h("p", { style: { fontSize: 13, color: C.textMuted, textAlign: "right" } }, m.q),
+          h("div", { style: { fontSize: 14, color: C.text, background: C.card2, borderRadius: 12, padding: "8px 10px", marginTop: 4 } },
+            m.a.length ? m.a.map((s, k) => h("p", { key: k, style: { marginBottom: 4 } }, s)) : h("p", null, "Eso no est\xE1 en esta lecci\xF3n."),
+            h("a", { href: "https://www.google.com/search?q=" + encodeURIComponent(lesson.title + " " + m.q), target: "_blank", rel: "noopener", style: { color: C.gold, fontSize: 12 } }, "Buscar m\xE1s en Google →")))),
+        h("div", { style: { display: "flex", gap: 8 } },
+          h("input", { value: ask, onChange: (e) => setAsk(e.target.value), onKeyDown: (e) => e.key === "Enter" && sendAsk(), placeholder: "Ej.: \xBFc\xF3mo lo aplico al estudio?", style: { ...pInput, padding: "10px 12px", fontSize: 14 } }),
+          h("button", { type: "button", onClick: sendAsk, style: pBtn({ background: C.gold, color: C.onAccent, border: "none" }) }, "→"))),
+      h("div", { style: { display: "flex", gap: 8, marginTop: 6 } },
+        h("button", { type: "button", onClick: () => toggle("done", !done), style: pBtn({ flex: 1, background: done ? C.card2 : C.gold, color: done ? C.text : C.onAccent, border: "none", padding: "12px" }) }, done ? "✓ Terminada" : "Marcar como terminada"),
+        h("button", { type: "button", onClick: () => toggle("saved", !saved), style: pBtn({ flex: 1, padding: "12px" }) }, saved ? "★ Guardada" : "☆ Guardar para despu\xE9s")));
+  }
+  function CustomTopic({ pil, topic, onBack }) {
+    const h = React.createElement;
+    const { c, set } = useCursos(pil);
+    const [notes, setNotes] = useState(topic.notes || "");
+    const save = (patch) => set({ custom: { ...(c.custom || {}), [topic.id]: { ...(c.custom || {})[topic.id], ...patch } } });
+    const done = Boolean((c.done || {})[topic.id]);
+    return h("div", null,
+      h("button", { type: "button", onClick: onBack, style: { color: C.textMuted, fontSize: 13, background: "transparent", marginBottom: 8 } }, "← Cursos"),
+      h("input", { value: topic.title, onChange: (e) => save({ title: e.target.value }), style: { ...pInput, fontSize: 18, marginBottom: 8 } }),
+      h("textarea", { value: notes, onChange: (e) => setNotes(e.target.value), onBlur: () => save({ notes }), rows: 8, placeholder: "Tus apuntes sobre este tema…", style: { ...pInput, lineHeight: 1.5 } }),
+      h("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8, fontSize: 13 } },
+        h("a", { href: videoLink({ query: topic.title }), target: "_blank", rel: "noopener", style: { color: C.gold } }, "▶ Buscar videos"), h("a", { href: bookLink({ title: topic.title, author: "" }), target: "_blank", rel: "noopener", style: { color: C.gold } }, "\u{1F4D6} Buscar libros")),
+      h("div", { style: { display: "flex", gap: 8, marginTop: 12 } },
+        h("button", { type: "button", onClick: () => { const m = { ...(c.done || {}) }; if (done) delete m[topic.id]; else m[topic.id] = Date.now(); set({ done: m }); }, style: pBtn({ background: done ? C.card2 : C.gold, color: done ? C.text : C.onAccent, border: "none" }) }, done ? "✓ Terminado" : "Marcar como terminado"),
+        h("button", { type: "button", onClick: () => { if (confirm("\xBFBorrar este tema?")) { save({ deleted: true }); onBack(); } }, style: pBtn({ color: C.danger }) }, "Borrar tema")));
   }
   function PillarNotes({ pil, pillar }) {
     const h = React.createElement;
