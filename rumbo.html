@@ -2765,7 +2765,9 @@
       })();
     }, [loading]);
     // Si otro dispositivo cambió "pilares", la app se recarga desde el módulo de sincronización.
-    const save = (next) => { setData(next); setItem("pilares", next); };
+    const latest = React.useRef(null);
+    latest.current = data;
+    const save = (next) => { latest.current = next; setData(next); setItem("pilares", next); };
     // Migración 2: los hábitos que se habían copiado como objetivos diarios vuelven a ser hábitos
     // (con su pilar y su historial), para que cada pilar tenga su panel de Hábitos sin duplicados.
     useEffect(() => {
@@ -2854,6 +2856,9 @@
         if (items.length) save({ ...data, tasks: [...(data.tasks || []), ...items] });
         return items;
       },
+      // Journaling: una entrada por fecha { text, prompt, added, updatedAt }.
+      saveJournal(day, patch) { const d = latest.current, j = d.journal || {}; save({ ...d, journal: { ...j, [day]: { ...(j[day] || {}), ...patch, updatedAt: Date.now() } } }); },
+      deleteJournal(day) { const d = latest.current; save({ ...d, journal: { ...(d.journal || {}), [day]: { text: "", deleted: true, updatedAt: Date.now() } } }); },
       updateTask(id, patch) { save({ ...data, tasks: (data.tasks || []).map((t) => t.id === id ? { ...t, ...patch } : t) }); },
       toggleTask(id) { save({ ...data, tasks: (data.tasks || []).map((t) => t.id === id ? { ...t, done: !t.done, doneAt: t.done ? null : Date.now() } : t) }); },
       deleteTask(id) { const t = (data.tasks || []).find((x) => x.id === id); if (t && t.audioId && !t.nota) AudioDB.del(t.audioId); save({ ...data, tasks: (data.tasks || []).filter((x) => x.id !== id) }); },
@@ -3061,6 +3066,7 @@
       sec("sistemas", "Sistemas de disciplina", h(SystemsView, { data: cx.disciplina, onChange: cx.persistDisciplina, onCreateHabit: cx.createHabitFromSystem, habitNames: cx.existingNames }), false);
       sec("checkin", "C\xF3mo me siento", h(CheckinCard, { checkins: cx.checkins, todayKey: cx.todayKey, onChange: cx.persistCheckins }), false);
     }
+    if (pillar === "espiritual" || pillar === "mental") out.push(h(PSection, { key: "journal", title: "Journaling", color: p.color, open: pillar === "espiritual" }, h(JournalPage, { pil })));
     if (pillar === "espiritual") sec("porque", "\xBFPor qu\xE9 madrugar?", h(WhyView, { data: cx.disciplina, onChange: cx.persistDisciplina }), false);
     if (pillar === "finanzas") sec("finanzas", "Ingresos y gastos", h(FinanceView, { finance: cx.finance, onChange: cx.persistFinance, monthKeyPrefix: cx.monthKeyPrefix }), true);
     if ((cx.goals || []).some((g) => goalPillar(g) === pillar)) out.push(h(PSection, { key: "metas", title: "Metas con fecha", color: p.color, open: false }, h(PillarGoals, { pil, pillar })));
@@ -3216,6 +3222,67 @@
         box("sem", "Durante la semana", tasks.filter((t) => t.kind === "semanal" && t.pk === wk).sort(sortT), "sin d\xEDa fijo"),
         box("mes", "Este mes", tasks.filter((t) => t.kind === "mensual" && t.pk === mo).sort(sortT), addDays(lunes, 3).toLocaleDateString("es-AR", { month: "long" })),
         h(PSection, { title: "Horario fijo del d\xEDa", open: false }, h(Embed, null, h(AgendaView, { agenda: pil.ctx.agenda, onChange: pil.ctx.persistAgenda })))));
+  }
+  // ── Journaling (Pilar Espiritual, también desde el Mental) ───────────────────
+  var JOURNAL_PROMPTS = [
+    "\xBFQu\xE9 aprend\xED hoy?", "\xBFPor qu\xE9 estoy agradecido hoy?", "\xBFQu\xE9 har\xEDa distinto ma\xF1ana?", "\xBFQu\xE9 me dio energ\xEDa hoy y qu\xE9 me la sac\xF3?",
+    "\xBFDe qu\xE9 estoy orgulloso hoy?", "\xBFQu\xE9 me preocupa y qu\xE9 parte depende de m\xED?", "\xBFA qui\xE9n ayud\xE9 hoy, o qui\xE9n me ayud\xF3?", "\xBFQu\xE9 h\xE1bito me acerc\xF3 a la persona que quiero ser?",
+    "\xBFQu\xE9 estuve evitando y por qu\xE9?", "Si hoy fuera mi \xFAltimo d\xEDa, \xBFqu\xE9 cambiar\xEDa?", "\xBFQu\xE9 momento de hoy quiero recordar?", "\xBFQu\xE9 decisi\xF3n tom\xE9 hoy que mi yo del futuro va a agradecer?"
+  ];
+  // Frases que suenan a algo pendiente: "tengo que…", "mañana voy a…", "no me tengo que olvidar de…".
+  var TODO_RE = /\b(?:tengo que|tenemos que|hay que|debo|deber[ií]a|necesito|no (?:me )?(?:tengo que )?olvidar(?:me)? de|acordarme de|tengo pendiente|me falta|voy a)\b/i;
+  function journalTodos(text) {
+    return (text || "").split(/[.!?]+\s+|\n+/).map((s) => s.trim()).filter((s) => s.length > 6 && TODO_RE.test(s)).slice(0, 6);
+  }
+  function JournalPage({ pil }) {
+    const h = React.createElement;
+    const today = fmtDate(/* @__PURE__ */ new Date());
+    const journal = pil.data.journal || {};
+    const [day, setDay] = useState(today);
+    const entry = journal[day] || {};
+    const [text, setText] = useState(entry.text || "");
+    const [prompt, setPrompt] = useState(entry.prompt === void 0 ? JOURNAL_PROMPTS[dayOfYear(/* @__PURE__ */ new Date()) % JOURNAL_PROMPTS.length] : entry.prompt);
+    const [q, setQ] = useState("");
+    const [hidden, setHidden] = useState([]);
+    const timer = React.useRef(null);
+    useEffect(() => { const e = (pil.data.journal || {})[day] || {}; setText(e.text || ""); setPrompt(e.prompt === void 0 ? (day === today ? JOURNAL_PROMPTS[dayOfYear(/* @__PURE__ */ new Date()) % JOURNAL_PROMPTS.length] : "") : e.prompt); setHidden([]); }, [day]);
+    const write = (t, pr) => pil.saveJournal(day, { text: t, prompt: pr === void 0 ? prompt : pr });
+    // Guarda solo un ratito después de dejar de escribir (en la notebook lenta no se traba).
+    const onType = (t) => { setText(t); clearTimeout(timer.current); timer.current = setTimeout(() => write(t), 700); };
+    useEffect(() => () => clearTimeout(timer.current), []);
+    const added = entry.added || [];
+    const todos = journalTodos(text).filter((s) => !added.includes(s) && !hidden.includes(s));
+    const toAgenda = (s) => { pil.addTasks([parseTask(s)]); pil.saveJournal(day, { text, prompt, added: [...added, s] }); };
+    const dictate = () => pil.setRecOpen({ mode: "text", onText: (t) => { const next = (text ? text.replace(/\s*$/, "") + (/[.!?]$/.test(text.trim()) ? " " : ". ") : "") + t; setText(next); write(next); } });
+    const nq = norm(q);
+    const past = Object.entries(journal).filter(([k, e]) => e && e.text && (!nq || norm(e.text + " " + (e.prompt || "")).includes(nq))).sort((a, b) => a[0] < b[0] ? 1 : -1);
+    const label = (k) => k === today ? "Hoy" : new Date(k + "T12:00").toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    return h("div", null,
+      h("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 10 } },
+        h("p", { style: { color: C.text, fontSize: 16, textTransform: "capitalize", flex: 1 } }, label(day)),
+        day !== today && h("button", { type: "button", onClick: () => setDay(today), style: pBtn({ padding: "5px 10px", fontSize: 12 }) }, "Ir a hoy")),
+      h("div", { className: "rb-noscroll", style: { display: "flex", gap: 6, overflowX: "auto", marginBottom: 10 } },
+        [["", "Libre"], ...JOURNAL_PROMPTS.map((x) => [x, x])].map(([v, l]) => h("button", { key: l, type: "button", onClick: () => { setPrompt(v); write(text, v); }, style: { fontFamily: FONT_BODY, fontSize: 12, padding: "6px 12px", borderRadius: 99, whiteSpace: "nowrap", color: prompt === v ? C.text : C.textMuted, background: prompt === v ? withAlpha(C.violet, 0.2) : "transparent", border: `1px solid ${prompt === v ? withAlpha(C.violet, 0.6) : C.border}` } }, l))),
+      prompt && h("p", { style: { color: C.violet, fontSize: 15, marginBottom: 8 } }, prompt),
+      h("div", { style: { position: "relative" } },
+        h("textarea", { value: text, onChange: (e) => onType(e.target.value), onBlur: () => write(text), rows: 8, placeholder: prompt ? "Escrib\xED tu respuesta…" : "Escrib\xED lo que quieras…", style: { ...pInput, lineHeight: 1.5, paddingRight: 56, minHeight: 180 } }),
+        h("div", { style: { position: "absolute", right: 8, bottom: 10 } }, h(MicButton, { onClick: dictate, label: "Dictar en el journal" }))),
+      h("p", { style: { fontSize: 11, color: C.textFaint, marginTop: 4 } }, "Se guarda solo."),
+      todos.length > 0 && h("div", { style: { ...pCard, padding: 12, marginTop: 10, background: withAlpha(C.gold, 0.08) } },
+        h("p", { style: { fontSize: 13, color: C.text, marginBottom: 6 } }, "Esto parece algo que ten\xE9s que hacer. \xBFLo paso a la Agenda?"),
+        todos.map((s) => { const t = parseTask(s), p = pillarById(t.pillar); return h("div", { key: s, style: { display: "flex", gap: 8, alignItems: "center", padding: "6px 0", borderTop: `1px solid ${C.borderSoft}` } },
+          h("span", { style: { flex: 1, fontSize: 13, color: C.textMuted } }, t.text, h("span", { style: { display: "block", fontSize: 11, color: C.textFaint } }, p ? p.name : "Sin pilar", " \xB7 ", taskWhen(t))),
+          h("button", { type: "button", onClick: () => toAgenda(s), style: pBtn({ padding: "5px 10px", fontSize: 12, background: C.gold, color: C.onAccent, border: "none" }) }, "+ Agenda"),
+          h("button", { type: "button", onClick: () => setHidden([...hidden, s]), "aria-label": "No", style: pBtn({ padding: "5px 8px", fontSize: 12 }) }, "✕")); })),
+      h("p", { style: { ...PLabel, margin: "18px 0 8px" } }, "Entradas anteriores"),
+      h("input", { value: q, onChange: (e) => setQ(e.target.value), placeholder: "Buscar en el journal…", style: { ...pInput, padding: "10px 12px", fontSize: 14, marginBottom: 8 } }),
+      past.length === 0 ? h("p", { style: { color: C.textFaint, fontSize: 13 } }, nq ? "No encontr\xE9 nada." : "Todav\xEDa no hay entradas.") : past.slice(0, 60).map(([k, e]) => h("div", { key: k, style: { ...pCard, padding: 12, marginBottom: 8, borderColor: k === day ? withAlpha(C.violet, 0.6) : C.border } },
+        h("button", { type: "button", onClick: () => { setDay(k); window.scrollTo({ top: 0, behavior: "smooth" }); }, style: { width: "100%", textAlign: "left", background: "transparent" } },
+          h("p", { style: { fontSize: 12, color: C.textMuted, textTransform: "capitalize" } }, label(k), e.prompt ? " \xB7 " + e.prompt : ""),
+          h("p", { style: { fontSize: 14, color: C.text, marginTop: 4, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden", whiteSpace: "pre-wrap" } }, e.text)),
+        h("div", { style: { display: "flex", gap: 6, marginTop: 8 } },
+          h("button", { type: "button", onClick: () => { setDay(k); window.scrollTo({ top: 0, behavior: "smooth" }); }, style: pBtn({ padding: "4px 10px", fontSize: 12 }) }, "Leer y editar"),
+          h("button", { type: "button", onClick: () => { if (confirm("\xBFBorrar la entrada de " + label(k) + "?")) { pil.deleteJournal(k); if (k === day) setText(""); } }, style: pBtn({ padding: "4px 10px", fontSize: 12, color: C.danger }) }, "Borrar")))));
   }
   function PillarNotes({ pil, pillar }) {
     const h = React.createElement;
