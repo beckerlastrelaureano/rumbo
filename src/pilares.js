@@ -607,6 +607,7 @@
     if (pillar === "espiritual" || pillar === "mental") out.push(h(PSection, { key: "journal", title: "Journaling", color: p.color, open: pillar === "espiritual" }, h(JournalPage, { pil })));
     if (pillar === "espiritual") sec("porque", "\xBFPor qu\xE9 madrugar?", h(WhyView, { data: cx.disciplina, onChange: cx.persistDisciplina }), false);
     if (pillar === "finanzas") sec("finanzas", "Ingresos y gastos", h(FinanceView, { finance: cx.finance, onChange: cx.persistFinance, monthKeyPrefix: cx.monthKeyPrefix }), true);
+    if (pillar === "marca") out.push(h(PSection, { key: "clientes", title: "Clientes", color: p.color, open: false }, h(ClientesPage, { embebido: true })));
     if ((cx.goals || []).some((g) => goalPillar(g) === pillar)) out.push(h(PSection, { key: "metas", title: "Metas con fecha", color: p.color, open: false }, h(PillarGoals, { pil, pillar })));
     return out;
   }
@@ -1046,6 +1047,121 @@
     const list = (pil.notes || []).filter((n) => notePillar(n) === pillar).slice(0, 5);
     if (!list.length) return null;
     return h("div", { style: { marginTop: 22 } }, h("p", { style: { ...PLabel, marginBottom: 8 } }, "Notas de este pilar"), list.map((n) => h(NoteItem, { key: n.id, pil, note: n })));
+  }
+
+  // ── Clientes (Marca Personal): códigos de acceso de Gym App ──────────────────
+  // Cada gimnasio tiene un código en Firebase (becker-sync, colección "licencias").
+  // La app del gimnasio lo pide después de formatear la demo y se bloquea si está suspendido.
+  // Solo funciona con la sesión de la nube iniciada con el email de Becker.
+  var GYMAPP_URL = "https://beckerlastrelaureano.github.io/gymapp-demo/";
+  var EMAIL_BECKER = "beckerlastrelaureano@gmail.com";
+  var isoHoy = () => fmtDate(/* @__PURE__ */ new Date());
+  function isoMasMeses(iso, meses) {
+    const [a, m, d] = iso.split("-").map(Number);
+    const f = new Date(a, m - 1 + meses, 1);
+    f.setDate(Math.min(d, new Date(f.getFullYear(), f.getMonth() + 1, 0).getDate()));
+    return fmtDate(f);
+  }
+  function fechaLarga(iso) {
+    if (!iso) return "—";
+    const [a, m, d] = iso.split("-").map(Number);
+    return `${d} ${["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"][m - 1]} ${a}`;
+  }
+  function nuevoCodigo() {
+    const abc = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+    const r = crypto.getRandomValues(new Uint8Array(8));
+    const s = Array.from(r, (b) => abc[b % abc.length]).join("");
+    return `GYM-${s.slice(0, 4)}-${s.slice(4)}`;
+  }
+  function linkWa(tel, texto) {
+    let n = String(tel || "").replace(/\D/g, "");
+    if (!n) return "";
+    if (!n.startsWith("54")) n = "549" + n.replace(/^0/, "");
+    return `https://wa.me/${n}?text=${encodeURIComponent(texto)}`;
+  }
+  function ClientesPage({ setTab, embebido }) {
+    const h = React.createElement;
+    const p = pillarById("marca") || PILLARS[0];
+    const [sync, setSync] = useState(() => window.rumboSync ? window.rumboSync.estado() : { user: null });
+    const [lista, setLista] = useState(null);
+    const [error, setError] = useState("");
+    const [form, setForm] = useState({ gimnasio: "", whatsapp: "", vencePago: isoMasMeses(isoHoy(), 1) });
+    const [ocupado, setOcupado] = useState("");
+    const email = sync.user && sync.user.email ? sync.user.email.toLowerCase() : "";
+    const esBecker = email === EMAIL_BECKER;
+
+    useEffect(() => {
+      const f = (e) => setSync(e.detail);
+      window.addEventListener("rumbo-sync", f);
+      return () => window.removeEventListener("rumbo-sync", f);
+    }, []);
+    const cargar = () => window.rumboSync.licencias.listar().then((l) => { setLista(l); setError(""); }).catch((e) => setError(e.message));
+    useEffect(() => { if (esBecker) cargar(); }, [esBecker]);
+
+    const guardar = async (codigo, cambios, aviso) => {
+      setOcupado(codigo);
+      try { await window.rumboSync.licencias.guardar(codigo, cambios); await cargar(); if (aviso) setError(""); }
+      catch (e) { setError(e.message); }
+      finally { setOcupado(""); }
+    };
+    const crear = async () => {
+      if (!form.gimnasio.trim()) return setError("Escrib\xED el nombre del gimnasio.");
+      const codigo = nuevoCodigo();
+      await guardar(codigo, { gimnasio: form.gimnasio.trim(), whatsapp: form.whatsapp.trim(), vencePago: form.vencePago, estado: "activo", producto: "Gym App", creado: Date.now() });
+      setForm({ gimnasio: "", whatsapp: "", vencePago: isoMasMeses(isoHoy(), 1) });
+    };
+    const mensaje = (c) => `\xA1Hola! Este es tu c\xF3digo de acceso de Gym App para ${c.gimnasio}: ${c.codigo}\n\n1) Abr\xED la app: ${GYMAPP_URL}\n2) Entr\xE1 como administrador > Ajustes del gimnasio > Empezar como gimnasio nuevo.\n3) Ingres\xE1 el c\xF3digo y listo.`;
+
+    const titulo = embebido ? h("p", { style: { color: C.textMuted, fontSize: 13, marginBottom: 12 } }, "Códigos de acceso de Gym App. Si un gimnasio no paga, suspendelo y su app se bloquea.") : h("div", null,
+      h("button", { type: "button", onClick: () => setTab("p-marca"), style: { color: C.textMuted, fontSize: 13, background: "transparent", marginBottom: 10 } }, "← Marca Personal"),
+      h("div", { style: { display: "flex", alignItems: "center", gap: 12, marginBottom: 14 } },
+        h("div", { style: { width: 44, height: 44, borderRadius: 14, display: "grid", placeItems: "center", background: withAlpha(p.color, 0.14), border: `1px solid ${withAlpha(p.color, 0.4)}` } }, h(PIcon, { pillar: "marca", size: 24 })),
+        h("div", null, h("p", { style: PLabel }, "Marca Personal"), h("h1", { style: { fontFamily: FONT_DISPLAY, fontWeight: 300, fontSize: 28, color: C.text, lineHeight: 1.1 } }, "Clientes"))),
+      h("p", { style: { color: C.textMuted, fontSize: 13, marginBottom: 16 } }, "C\xF3digos de acceso de Gym App. Si un gimnasio no paga, suspendelo y su app se bloquea."));
+
+    if (!esBecker) {
+      return h("div", { className: "pb-6" }, titulo,
+        h("div", { style: { ...pCard, padding: 16, color: C.textMuted, fontSize: 14 } },
+          sync.user ? `Est\xE1s en la nube como ${sync.user.email}. Los clientes solo se ven con ${EMAIL_BECKER}.`
+            : `Inici\xE1 sesi\xF3n en la nube (men\xFA > Sincronizar) con ${EMAIL_BECKER} para ver y crear los c\xF3digos.`));
+    }
+
+    const hoy = isoHoy();
+    const clientes = (lista || []).slice().sort((a, b) => (a.estado === b.estado ? 0 : a.estado === "suspendido" ? 1 : -1) || (a.vencePago || "").localeCompare(b.vencePago || ""));
+    const vencidos = clientes.filter((c) => c.estado === "activo" && c.vencePago && c.vencePago < hoy).length;
+    const stat = (label, val, color) => h("div", { style: { ...pCard, padding: "10px 12px" } }, h("div", { style: { fontSize: 20, color: color || C.text } }, val), h("div", { style: { fontSize: 11, color: C.textMuted } }, label));
+    const campo = (k, extra) => h("input", { value: form[k], onChange: (e) => setForm({ ...form, [k]: e.target.value }), style: pInput, ...extra });
+
+    return h("div", { className: "pb-6" }, titulo,
+      h("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 6, marginBottom: 14 } },
+        stat("activos", clientes.filter((c) => c.estado === "activo").length, C.sage),
+        stat("pago vencido", vencidos, vencidos ? C.danger : C.text),
+        stat("suspendidos", clientes.filter((c) => c.estado === "suspendido").length)),
+      h("div", { style: { ...pCard, padding: 14, display: "grid", gap: 8, marginBottom: 16 } },
+        h("p", { style: PLabel }, "Nuevo cliente"),
+        campo("gimnasio", { placeholder: "Nombre del gimnasio" }),
+        campo("whatsapp", { placeholder: "WhatsApp (opcional)", inputMode: "tel" }),
+        h("label", { style: { fontSize: 12, color: C.textMuted, display: "grid", gap: 4 } }, "Pagado hasta", campo("vencePago", { type: "date" })),
+        h("button", { type: "button", onClick: crear, disabled: !!ocupado, style: pBtn({ background: C.gold, color: C.onAccent, border: "none", padding: "12px", fontSize: 14 }) }, "Crear c\xF3digo")),
+      error && h("p", { style: { color: C.danger, fontSize: 13, marginBottom: 12 } }, error),
+      lista === null ? h("p", { style: { color: C.textFaint, fontSize: 14 } }, "Cargando…")
+        : !clientes.length ? h("p", { style: { color: C.textFaint, fontSize: 14 } }, "Todav\xEDa no hay clientes.")
+        : clientes.map((c) => {
+          const suspendido = c.estado === "suspendido";
+          const vencido = !suspendido && c.vencePago && c.vencePago < hoy;
+          const wa = linkWa(c.whatsapp, mensaje(c));
+          return h("div", { key: c.codigo, style: { ...pCard, padding: 14, marginBottom: 10, opacity: ocupado === c.codigo ? 0.6 : 1, borderColor: suspendido ? C.border : vencido ? withAlpha(C.danger, 0.6) : C.border } },
+            h("div", { style: { display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" } },
+              h("strong", { style: { fontSize: 16, color: C.text, fontWeight: 500 } }, c.gimnasio),
+              h("span", { style: { fontSize: 11, padding: "3px 8px", borderRadius: 99, color: suspendido ? C.textMuted : vencido ? C.danger : C.sage, border: `1px solid ${suspendido ? C.border : vencido ? C.danger : C.sage}` } }, suspendido ? "Suspendido" : vencido ? "Debe" : "Activo")),
+            h("button", { type: "button", title: "Copiar c\xF3digo", onClick: () => navigator.clipboard && navigator.clipboard.writeText(c.codigo), style: { fontFamily: "ui-monospace, monospace", fontSize: 16, letterSpacing: "0.08em", color: C.text, background: C.card2, border: `1px dashed ${C.border}`, borderRadius: 10, padding: "8px 12px", margin: "10px 0 6px" } }, c.codigo, " ⧉"),
+            h("p", { style: { fontSize: 13, color: vencido ? C.danger : C.textMuted, marginBottom: 10 } }, "Pagado hasta ", fechaLarga(c.vencePago)),
+            h("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 } },
+              h("button", { type: "button", onClick: () => guardar(c.codigo, { vencePago: isoMasMeses(c.vencePago && c.vencePago >= hoy ? c.vencePago : hoy, 1) }), style: pBtn({ background: C.gold, color: C.onAccent, border: "none" }) }, "+1 mes pagado"),
+              h("button", { type: "button", onClick: () => { if (suspendido || confirm(`\xBFSuspender ${c.gimnasio}? Su app se bloquea hasta que lo reactives.`)) guardar(c.codigo, { estado: suspendido ? "activo" : "suspendido" }); }, style: pBtn({ color: suspendido ? C.sage : C.danger }) }, suspendido ? "Reactivar" : "Suspender"),
+              wa ? h("a", { href: wa, target: "_blank", rel: "noopener", style: { ...pBtn(), textDecoration: "none" } }, "Enviar por WhatsApp")
+                : h("button", { type: "button", onClick: () => navigator.clipboard && navigator.clipboard.writeText(mensaje(c)), style: pBtn() }, "Copiar mensaje")));
+        }));
   }
 
   // ── Notas ────────────────────────────────────────────────────────────────────
